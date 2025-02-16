@@ -8,7 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 # Clone the repository
-RUN git clone https://github.com/vigarepo2/heroku-bypasser /app
+RUN git clone https://github.com/vigarepo2/heroku-bypass /app
 
 # Change working directory to the cloned repository
 WORKDIR /app

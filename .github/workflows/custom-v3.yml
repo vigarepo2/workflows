@@ -17,14 +17,6 @@ on:
         description: 'Docker image tag (e.g., latest, v1.0)'
         required: true
         default: 'latest'
-      build_option:
-        description: 'Choose the build option: "dockerfile", "compose", or "custom"'
-        required: true
-        default: 'dockerfile'
-      custom_build_command:
-        description: 'Custom build command (only used when build option is "custom")'
-        required: false
-        default: ''
 
 jobs:
   build-and-push:
@@ -43,31 +35,10 @@ jobs:
           username: ${{ github.event.inputs.docker_username }}
           password: ${{ github.event.inputs.docker_password }}
 
-      # Option 1: Build and push using a Dockerfile
-      - name: Build and Push via Dockerfile
-        if: ${{ github.event.inputs.build_option == 'dockerfile' }}
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v3
         with:
           context: .
           file: Dockerfile
           push: true
           tags: ${{ github.event.inputs.docker_username }}/${{ github.event.inputs.image_name }}:${{ github.event.inputs.image_tag }}
-
-      # Option 2: Build and push using Docker Compose
-      - name: Build and Push via Docker Compose
-        if: ${{ github.event.inputs.build_option == 'compose' }}
-        run: |
-          docker-compose build
-          docker-compose push
-
-      # Option 3: Run a custom build command provided by the user
-      - name: Run Custom Build Command
-        if: ${{ github.event.inputs.build_option == 'custom' }}
-        run: |
-          if [ -z "${{ github.event.inputs.custom_build_command }}" ]; then
-            echo "No custom build command provided. Exiting..."
-            exit 1
-          else
-            echo "Executing custom build command: ${{ github.event.inputs.custom_build_command }}"
-            eval "${{ github.event.inputs.custom_build_command }}"
-          fi

@@ -1,10 +1,6 @@
 name: Docker Build and Push Workflow v3
 
 on:
-  push:
-    branches:
-      - main
-      - latest
   workflow_dispatch:
     inputs:
       docker_username:
@@ -47,7 +43,7 @@ jobs:
           username: ${{ github.event.inputs.docker_username }}
           password: ${{ github.event.inputs.docker_password }}
 
-      # Option 1: Build and push using a Dockerfile with build-push-action
+      # Option 1: Build and push using a Dockerfile
       - name: Build and Push via Dockerfile
         if: ${{ github.event.inputs.build_option == 'dockerfile' }}
         uses: docker/build-push-action@v3

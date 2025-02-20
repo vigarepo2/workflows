@@ -4,7 +4,7 @@ import os
 app = Flask(__name__)
 
 # Directory where downloaded files are stored
-FILES_DIR = "files"
+FILES_DIR = "/app/files"
 
 # Serve files from 'files' directory
 @app.route("/download/<filename>")

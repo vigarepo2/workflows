@@ -3,7 +3,7 @@ FROM python:3.9
 # Set working directory
 WORKDIR /app
 
-# Copy JSON file
+# Copy JSON file containing download links
 COPY links.json /app/links.json
 
 # Install required packages
@@ -12,11 +12,23 @@ RUN apt-get update && apt-get install -y curl
 # Create 'files' directory for downloaded files
 RUN mkdir -p /app/files
 
-# Copy the Python download script separately
-COPY download.py /app/download.py
+# On-spot parallel download (executed during build)
+RUN python3 - <<EOF
+import json, os, subprocess, concurrent.futures
 
-# Run the Python script inside Docker
-RUN python3 /app/download.py
+with open('/app/links.json') as f:
+    links = json.load(f)
+
+os.makedirs('/app/files', exist_ok=True)
+
+def download(link):
+    filename = f"/app/files/{link['name']}"
+    if not os.path.exists(filename):  # Skip if already downloaded
+        subprocess.run(['curl', '-s', '-o', filename, link['url']])
+
+with concurrent.futures.ThreadPoolExecutor() as executor:
+    executor.map(download, links)
+EOF
 
 # Install Flask to serve files
 RUN pip install flask

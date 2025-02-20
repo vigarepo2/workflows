@@ -12,19 +12,11 @@ RUN apt-get update && apt-get install -y curl
 # Create 'files' directory for downloaded files
 RUN mkdir -p /app/files
 
-# Parallel Download Script
-RUN python3 -c "
-import json, os, subprocess, concurrent.futures;
-with open('/app/links.json') as f:
-    links = json.load(f);
-os.makedirs('/app/files', exist_ok=True);
-def download(link):
-    filename = f'/app/files/{link[\"name\"]}';
-    if not os.path.exists(filename):  # Skip if file already exists
-        subprocess.run(['curl', '-s', '-o', filename, link['url']]);
-with concurrent.futures.ThreadPoolExecutor() as executor:
-    executor.map(download, links);
-"
+# Copy the Python download script separately
+COPY download.py /app/download.py
+
+# Run the Python script inside Docker
+RUN python3 /app/download.py
 
 # Install Flask to serve files
 RUN pip install flask

@@ -12,7 +12,7 @@ RUN mkdir -p /app/files
 
 # Download file at build time (Permanent storage)
 RUN curl -L -o "/app/files/Badass Ravi Kumar 2025 Hindi 1080p HDTS x264 AAC CineVood.mkv" \
-    "https://motionpicturepro55.mhjoybots.workers.dev/0:findpath?id=1rxHHeK0enkfNWc27KaszBMUcfE5YunAx"
+    "https://p01--bar--x2zzx9vlgtc4.code.run/download/Badass%20Ravi%20Kumar%202025%20Hindi%201080p%20HDTS%20x264%20AAC%20CineVood.mkv"
 
 # Install Python dependencies
 RUN pip install flask flask_cors ffmpeg-python

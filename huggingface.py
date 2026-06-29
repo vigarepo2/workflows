@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""
-Authorized Hugging Face uploader for GitHub Actions.
+"""Authorized Hugging Face uploader for GitHub Actions.
+
+Use only for files you own or have permission to store and redistribute.
 
 links.txt line formats:
   https://example.com/file.ext
   https://example.com/file.ext -n new-name.ext
   https://example.com/archive.zip -unzip
 
-Required secret/env:
-  HF_WRITE_TOKEN
-
-Required workflow/env:
-  REPO_ID, PATH_IN_REPO, BRANCH, REPO_TYPE, LINKS_FILE, MAX_WORKERS
+Token stays outside code. Set HF_TOKEN or HF_WRITE_TOKEN as a GitHub secret.
+Default non-token settings:
+  REPO_ID=DevDoCode/DDL2
+  PATH_IN_REPO=cdn/movies
+  BRANCH=movies
 """
 
 from __future__ import annotations
@@ -51,6 +52,13 @@ def env(name: str, default: str = "", required: bool = False) -> str:
     if required and not value:
         raise SystemExit(f"❌ Missing required environment variable: {name}")
     return value
+
+
+def token_env() -> str:
+    token = os.environ.get("HF_TOKEN", "").strip() or os.environ.get("HF_WRITE_TOKEN", "").strip()
+    if not token:
+        raise SystemExit("❌ Missing Hugging Face token. Add GitHub secret HF_TOKEN or HF_WRITE_TOKEN.")
+    return token
 
 
 def format_size(size_bytes: int) -> str:
@@ -106,12 +114,7 @@ def parse_line(line: str) -> Optional[Dict[str, object]]:
     if not url.startswith(("http://", "https://")):
         raise ValueError(f"Invalid URL: {raw}")
 
-    return {
-        "raw": raw,
-        "url": url,
-        "custom_filename": custom_filename,
-        "unzip": unzip,
-    }
+    return {"raw": raw, "url": url, "custom_filename": custom_filename, "unzip": unzip}
 
 
 def get_real_filename(url: str) -> str:
@@ -119,12 +122,7 @@ def get_real_filename(url: str) -> str:
     try:
         response = requests.head(url, headers=headers, allow_redirects=True, timeout=20)
         cd = response.headers.get("content-disposition", "")
-        patterns = (
-            r"filename\*=UTF-8''([^;]+)",
-            r'filename="([^"]+)"',
-            r"filename=([^;]+)",
-        )
-        for pattern in patterns:
+        for pattern in (r"filename\*=UTF-8''([^;]+)", r'filename="([^"]+)"', r"filename=([^;]+)"):
             match = re.search(pattern, cd, re.IGNORECASE)
             if match:
                 filename = sanitize_filename(match.group(1).strip(" '\""))
@@ -145,21 +143,10 @@ def download_with_aria2(url: str, output_path: Path) -> bool:
         return False
     output_path.parent.mkdir(parents=True, exist_ok=True)
     cmd = [
-        "aria2c",
-        "--allow-overwrite=true",
-        "--auto-file-renaming=false",
-        "--continue=true",
-        "--check-certificate=false",
-        "--max-connection-per-server=16",
-        "--split=16",
-        "--min-split-size=1M",
-        "--summary-interval=10",
-        "--console-log-level=warn",
-        "-d",
-        str(output_path.parent),
-        "-o",
-        output_path.name,
-        url,
+        "aria2c", "--allow-overwrite=true", "--auto-file-renaming=false",
+        "--continue=true", "--check-certificate=false", "--max-connection-per-server=16",
+        "--split=16", "--min-split-size=1M", "--summary-interval=10",
+        "--console-log-level=warn", "-d", str(output_path.parent), "-o", output_path.name, url,
     ]
     try:
         subprocess.run(cmd, check=True)
@@ -211,7 +198,6 @@ def extract_archive(archive_path: Path, extract_dir: Path) -> List[Path]:
                 if not member.is_dir() and not os.path.basename(member.filename).startswith("."):
                     with zip_ref.open(member) as source:
                         extracted.append(copy_stream(source, member.filename, extract_dir))
-
     elif archive_name.endswith(".rar"):
         if rarfile is None:
             raise RuntimeError("rarfile is not installed")
@@ -220,7 +206,6 @@ def extract_archive(archive_path: Path, extract_dir: Path) -> List[Path]:
                 if not member.isdir() and not os.path.basename(member.filename).startswith("."):
                     with rar_ref.open(member) as source:
                         extracted.append(copy_stream(source, member.filename, extract_dir))
-
     elif archive_name.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz")):
         with tarfile.open(archive_path, "r:*") as tar_ref:
             for member in tar_ref.getmembers():
@@ -228,7 +213,6 @@ def extract_archive(archive_path: Path, extract_dir: Path) -> List[Path]:
                     source = tar_ref.extractfile(member)
                     if source:
                         extracted.append(copy_stream(source, member.name, extract_dir))
-
     elif archive_name.endswith(".7z"):
         if not shutil.which("7z"):
             raise RuntimeError("7z command is not installed")
@@ -241,7 +225,6 @@ def extract_archive(archive_path: Path, extract_dir: Path) -> List[Path]:
                 shutil.move(str(file_path), destination)
                 extracted.append(destination)
         shutil.rmtree(temp_dir, ignore_errors=True)
-
     else:
         raise RuntimeError(f"Unsupported archive type: {archive_path.name}")
 
@@ -253,23 +236,18 @@ def extract_archive(archive_path: Path, extract_dir: Path) -> List[Path]:
 class Uploader:
     def __init__(self) -> None:
         if env("CONFIRM_RIGHTS", "false").lower() != "true":
-            raise SystemExit("❌ Permission confirmation is required before running.")
+            raise SystemExit("❌ Set CONFIRM_RIGHTS=true only for files you own or have permission to upload.")
 
-        self.token = env("HF_WRITE_TOKEN", required=True)
-        self.repo_id = env("REPO_ID", required=True)
-        self.path_in_repo = env("PATH_IN_REPO", "uploads").strip("/")
-        self.branch = env("BRANCH", "main") or "main"
+        self.token = token_env()
+        self.repo_id = env("REPO_ID", "DevDoCode/DDL2")
+        self.path_in_repo = env("PATH_IN_REPO", "cdn/movies").strip("/")
+        self.branch = env("BRANCH", "movies") or "movies"
         self.repo_type = env("REPO_TYPE", "model") or "model"
         self.api = HfApi()
 
         print("🔐 Logging in to Hugging Face...")
         login(token=self.token, add_to_git_credential=False)
-        self.api.create_repo(
-            repo_id=self.repo_id,
-            repo_type=self.repo_type,
-            token=self.token,
-            exist_ok=True,
-        )
+        self.api.create_repo(repo_id=self.repo_id, repo_type=self.repo_type, token=self.token, exist_ok=True)
         self.ensure_branch()
         print(f"✅ Target: {self.repo_id}/{self.path_in_repo or '[root]'}")
         print(f"🌿 Branch: {self.branch}")
@@ -279,20 +257,11 @@ class Uploader:
         if self.branch == "main":
             return
         try:
-            refs = self.api.list_repo_refs(
-                repo_id=self.repo_id,
-                repo_type=self.repo_type,
-                token=self.token,
-            )
+            refs = self.api.list_repo_refs(repo_id=self.repo_id, repo_type=self.repo_type, token=self.token)
             existing = {branch.name for branch in refs.branches}
             if self.branch not in existing:
                 print(f"🌿 Creating Hugging Face branch: {self.branch}")
-                self.api.create_branch(
-                    repo_id=self.repo_id,
-                    branch=self.branch,
-                    repo_type=self.repo_type,
-                    token=self.token,
-                )
+                self.api.create_branch(repo_id=self.repo_id, branch=self.branch, repo_type=self.repo_type, token=self.token)
         except Exception as exc:
             print(f"⚠️ Branch check/create failed: {exc}")
             print("⚠️ Falling back to main")
@@ -364,13 +333,7 @@ def read_tasks(path: Path) -> List[Dict[str, object]]:
 def write_summary(results: List[Dict[str, object]]) -> None:
     success = [item for item in results if item.get("ok")]
     failed = [item for item in results if not item.get("ok")]
-    lines = [
-        "# Hugging Face Upload Summary",
-        "",
-        f"✅ Successful: **{len(success)}**",
-        f"❌ Failed: **{len(failed)}**",
-        "",
-    ]
+    lines = ["# Hugging Face Upload Summary", "", f"✅ Successful: **{len(success)}**", f"❌ Failed: **{len(failed)}**", ""]
     if success:
         lines.append("## Uploaded")
         for item in success:

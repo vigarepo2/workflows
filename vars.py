@@ -1,6 +1,6 @@
 HF_TOKEN_ENV = "HF_TOKEN"
 REPO_ID = "DevDoCode/DDL2"
-PATH_IN_REPO = "cdn/series/LOTR-S01"
+PATH_IN_REPO = "cdn/series"
 BRANCH = "series"
 REPO_TYPE = "model"
 LINKS_FILE = "links.txt"

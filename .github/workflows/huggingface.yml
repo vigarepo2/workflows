@@ -1,21 +1,56 @@
-name: HF Uploader
+name: Hugging Face Uploader
+run-name: Upload to ${{ inputs.repo_id }} · ${{ inputs.branch }}
 
 on:
   workflow_dispatch:
     inputs:
-      max_workers:
-        description: "Concurrent tasks: 1 is safest for storage, use 2+ only if runner space is enough"
-        required: false
-        default: "1"
+      repo_id:
+        description: Hugging Face repository in owner/repository format
+        required: true
+        default: DevDoCode/DDL2
         type: string
+      path_in_repo:
+        description: Destination folder inside the Hugging Face repository
+        required: false
+        default: content/cdn/v1
+        type: string
+      branch:
+        description: Hugging Face target branch
+        required: true
+        default: movies
+        type: string
+      repo_type:
+        description: Hugging Face repository type
+        required: true
+        default: model
+        type: choice
+        options:
+          - model
+          - dataset
+      download_workers:
+        description: Files downloaded concurrently; higher values use more runner storage
+        required: true
+        default: "3"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+          - "6"
+          - "8"
       confirm_rights:
-        description: "I confirm I own or have permission to upload all files listed in links.txt"
+        description: I own or have permission to upload every file in links.txt
         required: true
         default: false
         type: boolean
 
 permissions:
   contents: read
+
+concurrency:
+  group: hf-uploader-${{ github.repository }}-${{ inputs.repo_id }}-${{ inputs.branch }}
+  cancel-in-progress: false
 
 defaults:
   run:
@@ -27,11 +62,14 @@ jobs:
     timeout-minutes: 360
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
-      MAX_WORKERS: ${{ inputs.max_workers }}
-      CONFIRM_RIGHTS: ${{ inputs.confirm_rights }}
+      HF_REPO_ID: ${{ inputs.repo_id }}
+      HF_PATH_IN_REPO: ${{ inputs.path_in_repo }}
+      HF_BRANCH: ${{ inputs.branch }}
+      HF_REPO_TYPE: ${{ inputs.repo_type }}
+      DOWNLOAD_WORKERS: ${{ inputs.download_workers }}
       PYTHONUNBUFFERED: "1"
-      HF_HUB_DISABLE_PROGRESS_BARS: "1"
-      TQDM_DISABLE: "1"
+      HF_HUB_VERBOSITY: error
+      HF_HUB_DISABLE_TELEMETRY: "1"
 
     steps:
       - name: Checkout hf-uploader
@@ -39,17 +77,16 @@ jobs:
         with:
           ref: hf-uploader
 
-      - name: Validate
+      - name: Validate inputs
         run: |
-          if [ "$CONFIRM_RIGHTS" != "true" ]; then
-            echo "::error::Confirm permission before running."
-            exit 1
-          fi
-          test -f vars.py || { echo "::error::vars.py missing"; exit 1; }
-          test -f links.txt || { echo "::error::links.txt missing"; exit 1; }
-          test -n "$HF_TOKEN" || { echo "::error::Add HF_TOKEN in repository secrets"; exit 1; }
+          [[ "${{ inputs.confirm_rights }}" == "true" ]] || { echo "::error::Permission confirmation is required."; exit 1; }
+          [[ -f huggingface.py ]] || { echo "::error::huggingface.py is missing."; exit 1; }
+          [[ -s links.txt ]] || { echo "::error::links.txt is missing or empty."; exit 1; }
+          [[ -n "$HF_TOKEN" ]] || { echo "::error::Add HF_TOKEN as a repository secret."; exit 1; }
+          [[ "$HF_REPO_ID" == */* ]] || { echo "::error::Repository ID must use owner/repository format."; exit 1; }
+          [[ -n "$HF_BRANCH" ]] || { echo "::error::Branch cannot be empty."; exit 1; }
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -57,12 +94,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y aria2 unzip p7zip-full || true
-          sudo apt-get install -y unrar || sudo apt-get install -y unrar-free || true
-          python -m pip install --upgrade pip -q
-          python -m pip install huggingface_hub requests tqdm rarfile -q
+          sudo apt-get install -y -qq p7zip-full
+          sudo apt-get install -y -qq unrar-free || true
+          python -m pip install --disable-pip-version-check --no-cache-dir -q \
+            "huggingface_hub>=1.0,<2" \
+            "requests>=2.32,<3" \
+            "rarfile>=4,<5"
 
-      - name: Run uploader
+      - name: Download and upload
         run: python huggingface.py
 
       - name: Upload summary
@@ -72,3 +111,4 @@ jobs:
           name: hf-upload-summary
           path: upload_summary.md
           if-no-files-found: ignore
+          retention-days: 7

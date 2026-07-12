@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import concurrent.futures
+import copy
 import io
+import json
 import logging
 import os
 import re
 import shutil
 import subprocess
-import sys
 import tarfile
 import tempfile
 import threading
@@ -17,8 +19,13 @@ import urllib.parse
 import warnings
 import zipfile
 from dataclasses import dataclass
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Callable
+
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
+os.environ.setdefault("HF_HUB_VERBOSITY", "error")
 
 import requests
 from huggingface_hub import CommitOperationAdd, HfApi
@@ -28,142 +35,819 @@ try:
 except ImportError:
     rarfile = None
 
-LINKS_FILE = Path("links.txt")
-CHUNK_SIZE = 2 * 1024 * 1024
-CONNECT_TIMEOUT = 20
-READ_TIMEOUT = 180
-MAX_RETRIES = 3
-MAX_DOWNLOAD_WORKERS = 8
-ARCHIVE_EXTENSIONS = (
-    ".zip", ".rar", ".7z", ".tar", ".tar.gz", ".tgz",
-    ".tar.bz2", ".tbz2", ".tar.xz", ".txz",
-)
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-
 logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 warnings.filterwarnings("ignore", module="huggingface_hub")
 
+LINKS_FILE = Path("links.txt")
+CHUNK = 2 * 1024 * 1024
+CONNECT_TIMEOUT = 20
+READ_TIMEOUT = 180
+RETRIES = 3
+MAX_WORKERS = 8
+TICK = 0.25
 
-def env(name: str, default: str = "") -> str:
-    return os.environ.get(name, default).strip()
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36"
+)
+
+ARCHIVES = (
+    ".zip",
+    ".rar",
+    ".7z",
+    ".tar",
+    ".tar.gz",
+    ".tgz",
+    ".tar.bz2",
+    ".tbz2",
+    ".tar.xz",
+    ".txz",
+)
+
+TUNNEL_RE = re.compile(
+    r"https://[a-zA-Z0-9-]+\.trycloudflare\.com"
+)
+
+PAGE = r'''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+>
+<meta name="color-scheme" content="dark">
+<title>HF Uploader</title>
+
+<style>
+:root {
+    --bg: #07090d;
+    --card: #11161e;
+    --line: #252d39;
+    --text: #f5f7fb;
+    --muted: #8f99a8;
+    --violet: #8066ff;
+    --green: #26d6aa;
+    --red: #ff667f;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+        radial-gradient(
+            circle at 8% 0,
+            #1a1531 0,
+            transparent 34%
+        ),
+        var(--bg);
+    color: var(--text);
+    font:
+        14px/1.5 Inter,
+        system-ui,
+        -apple-system,
+        "Segoe UI",
+        sans-serif;
+}
+
+main {
+    width: min(1050px, calc(100% - 24px));
+    margin: auto;
+    padding: 28px 0 48px;
+}
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.eyebrow,
+.muted {
+    color: var(--muted);
+}
+
+.eyebrow {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+}
+
+h1 {
+    font-size: clamp(28px, 5vw, 44px);
+    letter-spacing: -.045em;
+    margin: 3px 0;
+}
+
+.live {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: #0b1016;
+    white-space: nowrap;
+}
+
+.dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 8px;
+    box-shadow: 0 0 0 5px #26d6aa1c;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.card {
+    background:
+        linear-gradient(
+            180deg,
+            #151b24,
+            #0e131a
+        );
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 18px 60px #0005;
+}
+
+.wide {
+    grid-column: 1 / -1;
+}
+
+.head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.head h2 {
+    font-size: 15px;
+    margin: 0;
+}
+
+.pill {
+    border: 1px solid var(--line);
+    background: #090d12;
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.big {
+    font-size: clamp(30px, 6vw, 48px);
+    font-weight: 780;
+    letter-spacing: -.05em;
+    margin-top: 14px;
+}
+
+.bar {
+    height: 10px;
+    border: 1px solid #202735;
+    background: #070a0e;
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 16px 0 12px;
+}
+
+.fill {
+    height: 100%;
+    width: 0;
+    background:
+        linear-gradient(
+            90deg,
+            var(--violet),
+            #ad9cff
+        );
+    transition: width .2s linear;
+}
+
+.upload .fill {
+    background:
+        linear-gradient(
+            90deg,
+            var(--green),
+            #7eead1
+        );
+}
+
+.ind {
+    width: 35% !important;
+    animation: move 1.1s ease-in-out infinite;
+}
+
+@keyframes move {
+    from {
+        transform: translateX(-110%);
+    }
+
+    to {
+        transform: translateX(315%);
+    }
+}
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.metric,
+.file {
+    background: #0a0f15;
+    border: 1px solid #202834;
+    border-radius: 12px;
+    padding: 10px;
+}
+
+.metric b {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.metric span {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+.files {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.file {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+}
+
+.name {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.small {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.result {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+}
+
+.result:first-child {
+    border-top: 0;
+}
+
+.result a {
+    color: var(--text);
+    font-weight: 700;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.ok {
+    color: var(--green);
+}
+
+.error {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border: 1px solid #ff667f55;
+    background: #ff667f12;
+    color: #ffd9df;
+    border-radius: 12px;
+    overflow-wrap: anywhere;
+}
+
+.footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 18px;
+}
+
+@media (max-width: 740px) {
+    main {
+        width: calc(100% - 16px);
+        padding-top: 16px;
+    }
+
+    .top {
+        flex-direction: column;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wide {
+        grid-column: auto;
+    }
+
+    .metrics {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .metric:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .card {
+        padding: 15px;
+    }
+}
+</style>
+</head>
+
+<body>
+<main>
+    <div class="top">
+        <div>
+            <div class="eyebrow">
+                GitHub Actions · Hugging Face
+            </div>
+
+            <h1>Live uploader</h1>
+
+            <div id="repo" class="muted">
+                Connecting…
+            </div>
+        </div>
+
+        <div class="live">
+            <span id="dot" class="dot"></span>
+            <span id="conn">Live</span>
+        </div>
+    </div>
+
+    <section class="grid">
+        <article class="card">
+            <div class="head">
+                <h2>Download</h2>
+                <span id="ds" class="pill">
+                    Waiting
+                </span>
+            </div>
+
+            <div id="dp" class="big">
+                0%
+            </div>
+
+            <div id="dsummary" class="muted">
+                Waiting for files
+            </div>
+
+            <div class="bar">
+                <div id="db" class="fill"></div>
+            </div>
+
+            <div class="metrics">
+                <div class="metric">
+                    <b id="dbytes">0 B</b>
+                    <span>Transferred</span>
+                </div>
+
+                <div class="metric">
+                    <b id="dspeed">0 B/s</b>
+                    <span>Speed</span>
+                </div>
+
+                <div class="metric">
+                    <b id="deta">—</b>
+                    <span>ETA</span>
+                </div>
+            </div>
+
+            <div id="files" class="files"></div>
+        </article>
+
+        <article class="card upload">
+            <div class="head">
+                <h2>Upload</h2>
+                <span id="us" class="pill">
+                    Waiting
+                </span>
+            </div>
+
+            <div id="up" class="big">
+                0%
+            </div>
+
+            <div id="ufile" class="muted">
+                Waiting for a downloaded file
+            </div>
+
+            <div class="bar">
+                <div id="ub" class="fill"></div>
+            </div>
+
+            <div class="metrics">
+                <div class="metric">
+                    <b id="ubytes">0 B</b>
+                    <span>Processed</span>
+                </div>
+
+                <div class="metric">
+                    <b id="uspeed">0 B/s</b>
+                    <span>Speed</span>
+                </div>
+
+                <div class="metric">
+                    <b id="ueta">—</b>
+                    <span>ETA</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="card wide">
+            <div class="head">
+                <h2>Uploaded files</h2>
+
+                <span id="count" class="pill">
+                    0 complete
+                </span>
+            </div>
+
+            <div id="results" class="muted">
+                Successful links will appear here.
+            </div>
+
+            <div id="errors"></div>
+        </article>
+    </section>
+
+    <div id="phase" class="footer">
+        Starting…
+    </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const formatSize = input => {
+    let value = Number(input || 0);
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let index = 0;
+
+    while (value >= 1024 && index < units.length - 1) {
+        value /= 1024;
+        index++;
+    }
+
+    return `${value.toFixed(index ? 1 : 0)} ${units[index]}`;
+};
+
+const formatTime = input => {
+    if (input == null || !Number.isFinite(input)) {
+        return "—";
+    }
+
+    const seconds = Math.max(0, Math.round(input));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remaining = seconds % 60;
+
+    if (hours) {
+        return (
+            `${hours}:` +
+            `${String(minutes).padStart(2, "0")}:` +
+            `${String(remaining).padStart(2, "0")}`
+        );
+    }
+
+    return (
+        `${minutes}:` +
+        `${String(remaining).padStart(2, "0")}`
+    );
+};
+
+function updateBar(id, percentage, running) {
+    const element = $(id);
+
+    if (percentage == null && running) {
+        element.classList.add("ind");
+        element.style.width = "35%";
+        return;
+    }
+
+    element.classList.remove("ind");
+    element.style.transform = "";
+    element.style.width =
+        `${Math.max(
+            0,
+            Math.min(
+                100,
+                Number(percentage || 0)
+            )
+        )}%`;
+}
+
+function render(state) {
+    $("repo").textContent =
+        `${state.repo_type}/${state.repo_id}` +
+        ` · ${state.branch}` +
+        ` · ${state.path || "/"}`;
+
+    $("phase").textContent = state.phase || "";
+
+    const download = state.download || {};
+
+    $("ds").textContent =
+        download.status || "waiting";
+
+    $("dp").textContent =
+        download.percent == null
+            ? "Live"
+            : `${Number(download.percent).toFixed(1)}%`;
+
+    $("dsummary").textContent =
+        `${download.complete || 0}/` +
+        `${download.files || 0} complete` +
+        (
+            download.failed
+                ? ` · ${download.failed} failed`
+                : ""
+        );
+
+    $("dbytes").textContent =
+        download.total
+            ? (
+                `${formatSize(download.done)} / ` +
+                `${formatSize(download.total)}`
+            )
+            : formatSize(download.done);
+
+    $("dspeed").textContent =
+        `${formatSize(download.speed)}/s`;
+
+    $("deta").textContent =
+        formatTime(download.eta);
+
+    updateBar(
+        "db",
+        download.percent,
+        download.status === "downloading"
+    );
+
+    $("files").innerHTML = "";
+
+    for (const file of download.active || []) {
+        const row = document.createElement("div");
+        row.className = "file";
+
+        const details = document.createElement("div");
+        const name = document.createElement("div");
+        const progress = document.createElement("div");
+        const status = document.createElement("div");
+
+        name.className = "name";
+        name.textContent = file.name;
+
+        progress.className = "small";
+        progress.textContent =
+            file.total
+                ? (
+                    `${formatSize(file.done)} / ` +
+                    `${formatSize(file.total)}`
+                )
+                : formatSize(file.done);
+
+        status.className = "small";
+        status.textContent = file.status;
+
+        details.append(name, progress);
+        row.append(details, status);
+        $("files").append(row);
+    }
+
+    const upload = state.upload || {};
+
+    $("us").textContent =
+        upload.status || "waiting";
+
+    $("up").textContent =
+        upload.percent == null
+            ? "Live"
+            : `${Number(upload.percent).toFixed(1)}%`;
+
+    $("ufile").textContent =
+        upload.file ||
+        "Waiting for a downloaded file";
+
+    $("ubytes").textContent =
+        upload.total
+            ? (
+                `${formatSize(upload.done)} / ` +
+                `${formatSize(upload.total)}`
+            )
+            : formatSize(upload.done);
+
+    $("uspeed").textContent =
+        `${formatSize(upload.speed)}/s`;
+
+    $("ueta").textContent =
+        formatTime(upload.eta);
+
+    updateBar(
+        "ub",
+        upload.percent,
+        ["preparing", "uploading"].includes(
+            upload.status
+        )
+    );
+
+    const results = state.results || [];
+
+    $("count").textContent =
+        `${results.length} complete`;
+
+    $("results").innerHTML = "";
+
+    if (!results.length) {
+        $("results").textContent =
+            "Successful links will appear here.";
+    }
+
+    for (const result of results) {
+        const row = document.createElement("div");
+        const link = document.createElement("a");
+        const complete = document.createElement("span");
+
+        row.className = "result";
+
+        link.href = result.url;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = result.file;
+
+        complete.className = "ok";
+        complete.textContent = "Complete";
+
+        row.append(link, complete);
+        $("results").append(row);
+    }
+
+    $("errors").innerHTML = "";
+
+    for (const message of state.errors || []) {
+        const error = document.createElement("div");
+        error.className = "error";
+        error.textContent = message;
+        $("errors").append(error);
+    }
+}
+
+const stream = new EventSource("/events");
+
+stream.onopen = () => {
+    $("conn").textContent = "Live";
+    $("dot").style.background = "var(--green)";
+};
+
+stream.onmessage = event => {
+    render(JSON.parse(event.data));
+};
+
+stream.onerror = () => {
+    $("conn").textContent = "Reconnecting";
+    $("dot").style.background = "#ffbf5c";
+};
+
+setInterval(() => {
+    fetch("/state", {
+        cache: "no-store"
+    })
+        .then(response => response.json())
+        .then(render)
+        .catch(() => {});
+}, 5000);
+</script>
+</body>
+</html>'''
 
 
-def bounded_int(value: str, default: int, minimum: int, maximum: int) -> int:
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        parsed = default
-    return max(minimum, min(parsed, maximum))
-
-
-def format_size(size: int | float) -> str:
+def size_text(value: int | float) -> str:
     units = ("B", "KB", "MB", "GB", "TB")
-    value = float(max(size, 0))
+    number = float(max(value, 0))
     index = 0
-    while value >= 1024 and index < len(units) - 1:
-        value /= 1024
+
+    while number >= 1024 and index < len(units) - 1:
+        number /= 1024
         index += 1
-    return f"{value:.1f} {units[index]}"
+
+    return f"{number:.1f} {units[index]}"
 
 
-def format_duration(seconds: float) -> str:
-    seconds = max(0, int(seconds))
-    hours, remainder = divmod(seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes:02d}:{seconds:02d}"
+def clean_name(name: str) -> str:
+    name = urllib.parse.unquote(name or "")
+    name = os.path.basename(
+        name.replace("\\", "/")
+    )
+
+    name = re.sub(
+        r'[<>:"/\\|?*\x00-\x1f]',
+        "_",
+        name
+    ).strip(". ")
+
+    return name or f"file_{int(time.time())}.bin"
 
 
-def progress_bar(percent: float, width: int = 18) -> str:
-    percent = max(0.0, min(percent, 100.0))
-    filled = int(width * percent / 100)
-    return "█" * filled + "░" * (width - filled)
+def safe_error(value: BaseException | str) -> str:
+    text = (
+        str(value).strip() or
+        value.__class__.__name__
+    )
+
+    text = re.sub(
+        r"https?://\S+",
+        "[remote URL]",
+        text
+    )
+
+    token = os.environ.get("HF_TOKEN", "")
+
+    if token:
+        text = text.replace(
+            token,
+            "[redacted]"
+        )
+
+    return text[:500]
 
 
-def sanitize_filename(filename: str) -> str:
-    filename = urllib.parse.unquote(filename or "")
-    filename = os.path.basename(filename.replace("\\", "/"))
-    filename = re.sub(r"[<>:\"/\\|?*\x00-\x1f]", "_", filename).strip(". ")
-    return filename or f"file_{int(time.time())}.bin"
+def unique_path(folder: Path, name: str) -> Path:
+    folder.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
+    path = folder / clean_name(name)
 
-def unique_path(folder: Path, filename: str) -> Path:
-    folder.mkdir(parents=True, exist_ok=True)
-    candidate = folder / sanitize_filename(filename)
-    if not candidate.exists():
-        return candidate
-    stem, suffix = candidate.stem, candidate.suffix
+    if not path.exists():
+        return path
+
     counter = 1
-    while True:
-        candidate = folder / f"{stem}_{counter}{suffix}"
-        if not candidate.exists():
-            return candidate
+    stem = path.stem
+    suffix = path.suffix
+
+    while (
+        folder /
+        f"{stem}_{counter}{suffix}"
+    ).exists():
         counter += 1
 
-
-def filename_from_response(response: requests.Response) -> str:
-    disposition = response.headers.get("content-disposition", "")
-    patterns = (
-        r"filename\*=UTF-8''([^;]+)",
-        r'filename="([^"]+)"',
-        r"filename=([^;]+)",
+    return (
+        folder /
+        f"{stem}_{counter}{suffix}"
     )
-    for pattern in patterns:
-        match = re.search(pattern, disposition, re.IGNORECASE)
-        if match:
-            filename = sanitize_filename(match.group(1).strip(" '\""))
-            if len(filename) > 2:
-                return filename
-
-    filename = sanitize_filename(Path(urllib.parse.urlparse(response.url).path).name)
-    return filename if "." in filename else f"download_{int(time.time())}.bin"
-
-
-class LiveLine:
-    def __init__(self, interval: float = 0.20) -> None:
-        self.interval = interval
-        self.last_render = 0.0
-        self.lock = threading.Lock()
-        self.open = False
-
-    def update(self, text: str, force: bool = False) -> None:
-        now = time.monotonic()
-        with self.lock:
-            if not force and now - self.last_render < self.interval:
-                return
-            sys.stdout.write(f"\r\033[2K{text}")
-            sys.stdout.flush()
-            self.last_render = now
-            self.open = True
-
-    def finish(self, text: str) -> None:
-        with self.lock:
-            sys.stdout.write(f"\r\033[2K{text}\n")
-            sys.stdout.flush()
-            self.last_render = time.monotonic()
-            self.open = False
-
-    def message(self, text: str) -> None:
-        with self.lock:
-            if self.open:
-                sys.stdout.write("\n")
-                self.open = False
-            print(text, flush=True)
 
 
 @dataclass(frozen=True)
 class Task:
     index: int
     url: str
-    custom_filename: str | None
+    name: str | None
     unzip: bool
 
 
 @dataclass
-class DownloadedTask:
+class Downloaded:
     task: Task
-    work_dir: Path
-    file_path: Path | None = None
-    error: str | None = None
+    work: Path
+    path: Path | None = None
+    error: str = ""
 
 
 @dataclass
@@ -175,456 +859,1730 @@ class Result:
     error: str = ""
 
 
-def parse_line(line: str, index: int) -> Task | None:
-    raw = line.strip()
-    if not raw or raw.startswith("#"):
-        return None
+class Store:
+    def __init__(
+        self,
+        repo: str,
+        repo_type: str,
+        branch: str,
+        path: str
+    ) -> None:
+        self.condition = threading.Condition()
+        self.version = 1
 
-    unzip = raw.lower().endswith(" -unzip")
-    if unzip:
-        raw = raw[: -len(" -unzip")].strip()
+        self.data: dict[str, Any] = {
+            "repo_id": repo,
+            "repo_type": repo_type,
+            "branch": branch,
+            "path": path,
+            "phase": "Starting…",
+            "download": {
+                "status": "waiting",
+                "files": 0,
+                "complete": 0,
+                "failed": 0,
+                "done": 0,
+                "total": 0,
+                "speed": 0,
+                "eta": None,
+                "percent": 0,
+                "active": []
+            },
+            "upload": {
+                "status": "waiting",
+                "file": "",
+                "done": 0,
+                "total": 0,
+                "speed": 0,
+                "eta": None,
+                "percent": 0
+            },
+            "results": [],
+            "errors": []
+        }
 
-    custom_filename = None
-    if " -n " in raw:
-        url, custom_filename = raw.split(" -n ", 1)
-        custom_filename = sanitize_filename(custom_filename.strip())
-    else:
-        url = raw
+    def set(
+        self,
+        key: str,
+        value: Any
+    ) -> None:
+        with self.condition:
+            self.data[key] = value
+            self.version += 1
+            self.condition.notify_all()
 
-    url = url.strip()
-    if not url.startswith(("http://", "https://")):
-        raise ValueError("URL must start with http:// or https://")
+    def phase(
+        self,
+        text: str
+    ) -> None:
+        self.set(
+            "phase",
+            text
+        )
 
-    return Task(index=index, url=url, custom_filename=custom_filename, unzip=unzip)
+    def result(
+        self,
+        item: Result
+    ) -> None:
+        with self.condition:
+            self.data["results"].append({
+                "file": item.file,
+                "size": item.size,
+                "url": item.url
+            })
+
+            self.version += 1
+            self.condition.notify_all()
+
+    def error(
+        self,
+        text: str
+    ) -> None:
+        with self.condition:
+            self.data["errors"].append(text)
+            self.version += 1
+            self.condition.notify_all()
+
+    def snapshot(
+        self,
+        after: int = -1,
+        timeout: float = 0
+    ) -> tuple[int, dict[str, Any]]:
+        with self.condition:
+            if after >= 0:
+                self.condition.wait_for(
+                    lambda: self.version != after,
+                    timeout=timeout
+                )
+
+            return (
+                self.version,
+                copy.deepcopy(self.data)
+            )
+
+
+def handler_for(
+    store: Store
+) -> type[BaseHTTPRequestHandler]:
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def log_message(
+            self,
+            _format: str,
+            *_arguments: Any
+        ) -> None:
+            pass
+
+        def reply(
+            self,
+            body: bytes,
+            content_type: str
+        ) -> None:
+            self.send_response(200)
+
+            self.send_header(
+                "Content-Type",
+                content_type
+            )
+
+            self.send_header(
+                "Content-Length",
+                str(len(body))
+            )
+
+            self.send_header(
+                "Cache-Control",
+                "no-store"
+            )
+
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self) -> None:
+            path = urllib.parse.urlparse(
+                self.path
+            ).path
+
+            if path == "/":
+                self.reply(
+                    PAGE.encode(),
+                    "text/html; charset=utf-8"
+                )
+                return
+
+            if path == "/state":
+                _, data = store.snapshot()
+
+                self.reply(
+                    json.dumps(
+                        data,
+                        separators=(",", ":")
+                    ).encode(),
+                    "application/json"
+                )
+                return
+
+            if path == "/health":
+                self.reply(
+                    b"ok",
+                    "text/plain"
+                )
+                return
+
+            if path != "/events":
+                self.send_error(404)
+                return
+
+            self.send_response(200)
+
+            self.send_header(
+                "Content-Type",
+                "text/event-stream"
+            )
+
+            self.send_header(
+                "Cache-Control",
+                "no-cache, no-transform"
+            )
+
+            self.send_header(
+                "Connection",
+                "keep-alive"
+            )
+
+            self.send_header(
+                "X-Accel-Buffering",
+                "no"
+            )
+
+            self.end_headers()
+
+            version = 0
+
+            try:
+                while True:
+                    current, data = store.snapshot(
+                        version,
+                        12
+                    )
+
+                    if current == version:
+                        payload = b": ping\n\n"
+                    else:
+                        encoded = json.dumps(
+                            data,
+                            separators=(",", ":")
+                        )
+
+                        payload = (
+                            f"id: {current}\n"
+                            f"data: {encoded}\n\n"
+                        ).encode()
+
+                    self.wfile.write(payload)
+                    self.wfile.flush()
+                    version = current
+
+            except (
+                BrokenPipeError,
+                ConnectionResetError,
+                TimeoutError
+            ):
+                pass
+
+    return Handler
+
+
+class Dashboard:
+    def __init__(
+        self,
+        store: Store,
+        port: int
+    ) -> None:
+        self.server = ThreadingHTTPServer(
+            ("127.0.0.1", port),
+            handler_for(store)
+        )
+
+        self.thread = threading.Thread(
+            target=self.server.serve_forever,
+            daemon=True
+        )
+
+    def start(self) -> None:
+        self.thread.start()
+
+    def stop(self) -> None:
+        self.server.shutdown()
+        self.server.server_close()
+
+
+class Tunnel:
+    def __init__(
+        self,
+        port: int
+    ) -> None:
+        self.port = port
+        self.process: subprocess.Popen[str] | None = None
+        self.url = ""
+        self.ready = threading.Event()
+
+    def start(self) -> str:
+        binary = shutil.which("cloudflared")
+
+        if not binary:
+            raise RuntimeError(
+                "cloudflared is not installed"
+            )
+
+        self.process = subprocess.Popen(
+            [
+                binary,
+                "tunnel",
+                "--url",
+                f"http://127.0.0.1:{self.port}",
+                "--no-autoupdate",
+                "--loglevel",
+                "info"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+
+        def read_output() -> None:
+            assert self.process
+            assert self.process.stdout
+
+            for line in self.process.stdout:
+                match = TUNNEL_RE.search(line)
+
+                if match and not self.url:
+                    self.url = match.group(0)
+                    self.ready.set()
+
+        threading.Thread(
+            target=read_output,
+            daemon=True
+        ).start()
+
+        if not self.ready.wait(35):
+            raise RuntimeError(
+                "Cloudflare Quick Tunnel "
+                "did not return a URL"
+            )
+
+        return self.url
+
+    def stop(self) -> None:
+        if (
+            self.process and
+            self.process.poll() is None
+        ):
+            self.process.terminate()
+
+            try:
+                self.process.wait(5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
 
 
 def read_tasks() -> list[Task]:
     if not LINKS_FILE.is_file():
-        raise SystemExit("INPUT ERROR | links.txt is missing")
+        raise SystemExit(
+            "INPUT ERROR | links.txt is missing"
+        )
 
     tasks: list[Task] = []
-    for line_number, line in enumerate(LINKS_FILE.read_text(encoding="utf-8").splitlines(), 1):
-        try:
-            task = parse_line(line, len(tasks) + 1)
-        except ValueError as exc:
-            raise SystemExit(f"INPUT ERROR | links.txt line {line_number}: {exc}") from exc
-        if task:
-            tasks.append(task)
+
+    for line_number, line in enumerate(
+        LINKS_FILE.read_text(
+            encoding="utf-8"
+        ).splitlines(),
+        1
+    ):
+        raw = line.strip()
+
+        if (
+            not raw or
+            raw.startswith("#")
+        ):
+            continue
+
+        unzip = raw.lower().endswith(
+            " -unzip"
+        )
+
+        if unzip:
+            raw = raw[:-7].strip()
+
+        custom_name = None
+
+        if " -n " in raw:
+            raw, custom_name = raw.split(
+                " -n ",
+                1
+            )
+
+            custom_name = clean_name(
+                custom_name.strip()
+            )
+
+        if not raw.startswith(
+            ("http://", "https://")
+        ):
+            raise SystemExit(
+                "INPUT ERROR | "
+                f"links.txt line {line_number}: "
+                "invalid URL"
+            )
+
+        tasks.append(
+            Task(
+                index=len(tasks) + 1,
+                url=raw.strip(),
+                name=custom_name,
+                unzip=unzip
+            )
+        )
 
     if not tasks:
-        raise SystemExit("INPUT ERROR | links.txt contains no valid URLs")
+        raise SystemExit(
+            "INPUT ERROR | "
+            "links.txt contains no valid URLs"
+        )
+
     return tasks
 
 
 class DownloadProgress:
-    def __init__(self, total_files: int, line: LiveLine) -> None:
-        self.total_files = total_files
-        self.line = line
-        self.started = time.monotonic()
+    def __init__(
+        self,
+        store: Store,
+        tasks: list[Task]
+    ) -> None:
+        self.store = store
         self.lock = threading.Lock()
-        self.states: dict[int, dict[str, Any]] = {}
+        self.stop_event = threading.Event()
 
-    def update(self, task: Task, filename: str, downloaded: int, total: int, status: str = "active") -> None:
-        with self.lock:
-            self.states[task.index] = {
-                "filename": filename,
-                "downloaded": downloaded,
-                "total": total,
-                "status": status,
+        self.rows = {
+            task.index: {
+                "name": (
+                    task.name or
+                    f"File {task.index}"
+                ),
+                "done": 0,
+                "total": 0,
+                "status": "queued"
             }
-            self._render()
+            for task in tasks
+        }
 
-    def _render(self, force: bool = False) -> None:
-        downloaded = sum(int(item["downloaded"]) for item in self.states.values())
-        known_total = sum(int(item["total"]) for item in self.states.values() if int(item["total"]) > 0)
-        unknown = (self.total_files - len(self.states)) + sum(
-            1 for item in self.states.values() if int(item["total"]) <= 0
+        self.last_at = time.monotonic()
+        self.last_bytes = 0
+        self.speed = 0.0
+
+        self.thread = threading.Thread(
+            target=self.loop,
+            daemon=True
         )
-        complete = sum(1 for item in self.states.values() if item["status"] == "done")
-        failed = sum(1 for item in self.states.values() if item["status"] == "failed")
-        elapsed = max(time.monotonic() - self.started, 0.001)
-        speed = downloaded / elapsed
 
-        if known_total and unknown == 0:
-            percent = min(downloaded / known_total * 100, 100.0)
-            remaining = max(known_total - downloaded, 0)
-            eta = format_duration(remaining / speed) if speed > 0 else "--:--"
-            text = (
-                f"DOWNLOAD  {progress_bar(percent)} {percent:5.1f}% | "
-                f"{complete}/{self.total_files} files | {format_size(downloaded)}/{format_size(known_total)} | "
-                f"{format_size(speed)}/s | ETA {eta}"
+    def start(self) -> None:
+        self.thread.start()
+        self.publish()
+
+    def update(
+        self,
+        task: Task,
+        name: str,
+        done: int,
+        total: int,
+        status: str
+    ) -> None:
+        with self.lock:
+            self.rows[task.index] = {
+                "name": name,
+                "done": max(done, 0),
+                "total": max(total, 0),
+                "status": status
+            }
+
+    def loop(self) -> None:
+        while not self.stop_event.wait(TICK):
+            self.publish()
+
+    def publish(self) -> None:
+        with self.lock:
+            rows = copy.deepcopy(
+                self.rows
+            )
+
+        now = time.monotonic()
+
+        done = sum(
+            int(item["done"])
+            for item in rows.values()
+        )
+
+        elapsed = max(
+            now - self.last_at,
+            0.001
+        )
+
+        instant_speed = max(
+            done - self.last_bytes,
+            0
+        ) / elapsed
+
+        if self.speed:
+            self.speed = (
+                self.speed * 0.65 +
+                instant_speed * 0.35
             )
         else:
-            text = (
-                f"DOWNLOAD  {complete}/{self.total_files} files | {format_size(downloaded)} | "
-                f"{format_size(speed)}/s"
-            )
-        if failed:
-            text += f" | {failed} failed"
-        self.line.update(text, force=force)
+            self.speed = instant_speed
 
-    def finish(self) -> None:
-        with self.lock:
-            downloaded = sum(int(item["downloaded"]) for item in self.states.values())
-            complete = sum(1 for item in self.states.values() if item["status"] == "done")
-            failed = sum(1 for item in self.states.values() if item["status"] == "failed")
-            state = "COMPLETE" if failed == 0 else "PARTIAL"
-            text = (
-                f"DOWNLOAD  {state} | {complete}/{self.total_files} files | "
-                f"{format_size(downloaded)} | {format_duration(time.monotonic() - self.started)}"
-            )
-            if failed:
-                text += f" | {failed} failed"
-            self.line.finish(text)
+        self.last_at = now
+        self.last_bytes = done
 
-
-class UploadProgress:
-    def __init__(self, file_path: Path, line: LiveLine) -> None:
-        self.file_path = file_path
-        self.total = file_path.stat().st_size
-        self.line = line
-        self.started = time.monotonic()
-        self.maximum = 0
-        self.lock = threading.Lock()
-        self.line.update(
-            f"UPLOAD    PREPARING | {file_path.name} | {format_size(self.total)}",
-            force=True,
+        complete = sum(
+            item["status"] == "complete"
+            for item in rows.values()
         )
 
-    def update(self, position: int) -> None:
-        with self.lock:
-            self.maximum = max(self.maximum, min(position, self.total))
-            elapsed = max(time.monotonic() - self.started, 0.001)
-            speed = self.maximum / elapsed
-            percent = self.maximum / self.total * 100 if self.total else 100.0
-            remaining = max(self.total - self.maximum, 0)
-            eta = format_duration(remaining / speed) if speed > 0 else "--:--"
-            self.line.update(
-                f"UPLOAD    {progress_bar(percent)} {percent:5.1f}% | {self.file_path.name} | "
-                f"{format_size(self.maximum)}/{format_size(self.total)} | {format_size(speed)}/s | ETA {eta}"
-            )
-
-    def finish(self) -> None:
-        self.line.finish(
-            f"UPLOAD    COMPLETE | {self.file_path.name} | {format_size(self.total)} | "
-            f"{format_duration(time.monotonic() - self.started)}"
+        failed = sum(
+            item["status"] == "failed"
+            for item in rows.values()
         )
 
-    def fail(self, error: str) -> None:
-        self.line.finish(f"UPLOAD    FAILED | {self.file_path.name} | {error}")
+        totals_known = all(
+            int(item["total"]) > 0
+            for item in rows.values()
+        )
+
+        total = (
+            sum(
+                int(item["total"])
+                for item in rows.values()
+            )
+            if totals_known
+            else 0
+        )
+
+        percent = (
+            min(
+                done / total * 100,
+                100
+            )
+            if total
+            else None
+        )
+
+        active = [
+            item
+            for item in rows.values()
+            if item["status"] in {
+                "downloading",
+                "retrying"
+            }
+        ]
+
+        if complete + failed == len(rows):
+            status = (
+                "complete"
+                if not failed
+                else "partial"
+            )
+        elif active:
+            status = "downloading"
+        else:
+            status = "waiting"
+
+        eta = (
+            (total - done) / self.speed
+            if total and self.speed
+            else None
+        )
+
+        self.store.set(
+            "download",
+            {
+                "status": status,
+                "files": len(rows),
+                "complete": complete,
+                "failed": failed,
+                "done": done,
+                "total": total,
+                "speed": int(self.speed),
+                "eta": eta,
+                "percent": percent,
+                "active": active
+            }
+        )
+
+    def finish(
+        self
+    ) -> tuple[int, int, int]:
+        self.stop_event.set()
+        self.thread.join(1)
+        self.publish()
+
+        with self.lock:
+            rows = copy.deepcopy(
+                self.rows
+            )
+
+        complete = sum(
+            item["status"] == "complete"
+            for item in rows.values()
+        )
+
+        failed = sum(
+            item["status"] == "failed"
+            for item in rows.values()
+        )
+
+        downloaded = sum(
+            int(item["done"])
+            for item in rows.values()
+        )
+
+        return complete, failed, downloaded
 
 
-class ProgressReader(io.BufferedReader):
-    def __init__(self, path: Path, callback: Callable[[int], None]) -> None:
-        raw = open(path, "rb", buffering=0)
-        super().__init__(raw, buffer_size=CHUNK_SIZE)
-        self.callback = callback
-        self.tracking = False
+def response_name(
+    response: requests.Response
+) -> str:
+    disposition = response.headers.get(
+        "content-disposition",
+        ""
+    )
 
-    def enable_tracking(self) -> None:
-        self.tracking = True
+    patterns = (
+        r"filename\*=UTF-8''([^;]+)",
+        r'filename="([^"]+)"',
+        r"filename=([^;]+)"
+    )
 
-    def read(self, size: int = -1) -> bytes:
-        data = super().read(size)
-        if self.tracking and data:
-            self.callback(self.tell())
-        return data
+    for pattern in patterns:
+        match = re.search(
+            pattern,
+            disposition,
+            re.IGNORECASE
+        )
+
+        if match:
+            return clean_name(
+                match.group(1).strip(" '\"")
+            )
+
+    name = clean_name(
+        Path(
+            urllib.parse.urlparse(
+                response.url
+            ).path
+        ).name
+    )
+
+    if "." in name:
+        return name
+
+    return f"download_{int(time.time())}.bin"
 
 
-def download_task(task: Task, progress: DownloadProgress) -> DownloadedTask:
-    work_dir = Path(tempfile.mkdtemp(prefix=f"hf_task_{task.index}_"))
-    output_path: Path | None = None
-    last_error = "Unknown download error"
+def response_size(
+    response: requests.Response,
+    existing: int
+) -> int:
+    match = re.search(
+        r"/(\d+)$",
+        response.headers.get(
+            "content-range",
+            ""
+        )
+    )
 
-    for attempt in range(1, MAX_RETRIES + 1):
+    if match:
+        return int(match.group(1))
+
+    length = int(
+        response.headers.get(
+            "content-length",
+            "0"
+        ) or 0
+    )
+
+    if response.status_code == 206:
+        return existing + length
+
+    return length
+
+
+def download(
+    task: Task,
+    progress: DownloadProgress
+) -> Downloaded:
+    work = Path(
+        tempfile.mkdtemp(
+            prefix=f"hf_{task.index}_"
+        )
+    )
+
+    path: Path | None = None
+    final_error = "unknown download error"
+
+    for attempt in range(
+        1,
+        RETRIES + 1
+    ):
         try:
-            existing = output_path.stat().st_size if output_path and output_path.exists() else 0
-            headers = {"User-Agent": USER_AGENT}
+            existing = (
+                path.stat().st_size
+                if path and path.exists()
+                else 0
+            )
+
+            headers = {
+                "User-Agent": USER_AGENT
+            }
+
             if existing:
-                headers["Range"] = f"bytes={existing}-"
+                headers["Range"] = (
+                    f"bytes={existing}-"
+                )
+
+            displayed_name = (
+                path.name
+                if path
+                else task.name or
+                f"File {task.index}"
+            )
+
+            progress.update(
+                task,
+                displayed_name,
+                existing,
+                0,
+                "downloading"
+            )
 
             with requests.get(
                 task.url,
                 headers=headers,
                 stream=True,
                 allow_redirects=True,
-                timeout=(CONNECT_TIMEOUT, READ_TIMEOUT),
+                timeout=(
+                    CONNECT_TIMEOUT,
+                    READ_TIMEOUT
+                )
             ) as response:
-                if response.status_code == 416 and output_path and output_path.exists():
-                    progress.update(task, output_path.name, existing, existing, "done")
-                    return DownloadedTask(task=task, work_dir=work_dir, file_path=output_path)
+                if (
+                    response.status_code == 416 and
+                    path and
+                    path.exists()
+                ):
+                    match = re.search(
+                        r"\*/(\d+)$",
+                        response.headers.get(
+                            "content-range",
+                            ""
+                        )
+                    )
+
+                    if (
+                        match and
+                        path.stat().st_size ==
+                        int(match.group(1))
+                    ):
+                        size = path.stat().st_size
+
+                        progress.update(
+                            task,
+                            path.name,
+                            size,
+                            size,
+                            "complete"
+                        )
+
+                        return Downloaded(
+                            task,
+                            work,
+                            path
+                        )
+
+                    path.unlink(
+                        missing_ok=True
+                    )
+
+                    raise RuntimeError(
+                        "partial download "
+                        "could not be resumed"
+                    )
 
                 response.raise_for_status()
 
-                if output_path is None:
-                    filename = task.custom_filename or filename_from_response(response)
-                    output_path = unique_path(work_dir / "downloads", filename)
+                if path is None:
+                    path = unique_path(
+                        work / "downloads",
+                        task.name or
+                        response_name(response)
+                    )
+
                     existing = 0
 
-                resumed = existing > 0 and response.status_code == 206
+                resumed = (
+                    existing > 0 and
+                    response.status_code == 206
+                )
+
                 if not resumed:
                     existing = 0
 
-                content_length = int(response.headers.get("content-length", "0") or 0)
-                total = existing + content_length if content_length else 0
-                downloaded = existing
-                mode = "ab" if resumed else "wb"
-                progress.update(task, output_path.name, downloaded, total)
+                total = response_size(
+                    response,
+                    existing
+                )
 
-                with output_path.open(mode) as handle:
-                    for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
-                        if not chunk:
+                done = existing
+
+                progress.update(
+                    task,
+                    path.name,
+                    done,
+                    total,
+                    "downloading"
+                )
+
+                mode = (
+                    "ab"
+                    if resumed
+                    else "wb"
+                )
+
+                with path.open(mode) as handle:
+                    for block in response.iter_content(
+                        CHUNK
+                    ):
+                        if not block:
                             continue
-                        handle.write(chunk)
-                        downloaded += len(chunk)
-                        progress.update(task, output_path.name, downloaded, total)
 
-                if output_path.stat().st_size == 0:
-                    raise RuntimeError("server returned an empty file")
-                if total and output_path.stat().st_size < total:
-                    raise RuntimeError("connection closed before the download completed")
+                        handle.write(block)
+                        done += len(block)
 
-                final_size = output_path.stat().st_size
-                progress.update(task, output_path.name, final_size, total or final_size, "done")
-                return DownloadedTask(task=task, work_dir=work_dir, file_path=output_path)
+                        progress.update(
+                            task,
+                            path.name,
+                            done,
+                            total,
+                            "downloading"
+                        )
+
+                final_size = path.stat().st_size
+
+                if (
+                    not final_size or
+                    total and
+                    final_size < total
+                ):
+                    raise RuntimeError(
+                        "download ended before "
+                        "the file was complete"
+                    )
+
+                progress.update(
+                    task,
+                    path.name,
+                    final_size,
+                    total or final_size,
+                    "complete"
+                )
+
+                return Downloaded(
+                    task,
+                    work,
+                    path
+                )
 
         except Exception as exc:
-            last_error = str(exc).strip() or exc.__class__.__name__
-            if attempt < MAX_RETRIES:
-                time.sleep(min(2 ** (attempt - 1), 4))
+            final_error = safe_error(exc)
 
-    filename = output_path.name if output_path else task.custom_filename or f"task-{task.index}"
-    current_size = output_path.stat().st_size if output_path and output_path.exists() else 0
-    progress.update(task, filename, current_size, current_size, "failed")
-    return DownloadedTask(task=task, work_dir=work_dir, file_path=output_path, error=last_error)
-
-
-def copy_member(source: Any, member_name: str, destination: Path) -> Path:
-    output = unique_path(destination, Path(member_name).name)
-    with output.open("wb") as target:
-        shutil.copyfileobj(source, target)
-    return output
-
-
-def extract_archive(archive: Path, destination: Path) -> list[Path]:
-    destination.mkdir(parents=True, exist_ok=True)
-    name = archive.name.lower()
-    extracted: list[Path] = []
-
-    if name.endswith(".zip"):
-        with zipfile.ZipFile(archive) as package:
-            for member in package.infolist():
-                if not member.is_dir() and not Path(member.filename).name.startswith("."):
-                    with package.open(member) as source:
-                        extracted.append(copy_member(source, member.filename, destination))
-
-    elif name.endswith(".rar"):
-        if rarfile is None:
-            raise RuntimeError("RAR support is unavailable")
-        with rarfile.RarFile(archive) as package:
-            for member in package.infolist():
-                if not member.isdir() and not Path(member.filename).name.startswith("."):
-                    with package.open(member) as source:
-                        extracted.append(copy_member(source, member.filename, destination))
-
-    elif name.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz")):
-        with tarfile.open(archive, "r:*") as package:
-            for member in package.getmembers():
-                if member.isfile() and not Path(member.name).name.startswith("."):
-                    source = package.extractfile(member)
-                    if source:
-                        with source:
-                            extracted.append(copy_member(source, member.name, destination))
-
-    elif name.endswith(".7z"):
-        if not shutil.which("7z"):
-            raise RuntimeError("7z is not installed")
-        subprocess.run(
-            ["7z", "e", "-y", f"-o{destination}", str(archive)],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        extracted = [path for path in destination.iterdir() if path.is_file() and not path.name.startswith(".")]
-
-    else:
-        raise RuntimeError(f"unsupported archive type: {archive.name}")
-
-    return sorted(extracted, key=lambda path: path.name.lower())
-
-
-def chunks(items: list[Task], size: int) -> Iterable[list[Task]]:
-    for start in range(0, len(items), size):
-        yield items[start : start + size]
-
-
-class HubUploader:
-    def __init__(self, line: LiveLine) -> None:
-        self.token = env("HF_TOKEN")
-        self.repo_id = env("HF_REPO_ID")
-        self.path_in_repo = env("HF_PATH_IN_REPO").strip("/")
-        self.branch = env("HF_BRANCH", "main") or "main"
-        self.repo_type = env("HF_REPO_TYPE", "model").lower() or "model"
-        self.line = line
-
-        if not self.token:
-            raise SystemExit("CONFIG ERROR | HF_TOKEN secret is missing")
-        if not self.repo_id or "/" not in self.repo_id:
-            raise SystemExit("CONFIG ERROR | Repository ID must use owner/repository format")
-        if self.repo_type not in {"model", "dataset"}:
-            raise SystemExit("CONFIG ERROR | Repository type must be model or dataset")
-
-        self.api = HfApi(token=self.token)
-        self.api.create_repo(
-            repo_id=self.repo_id,
-            repo_type=self.repo_type,
-            token=self.token,
-            exist_ok=True,
-        )
-        self.ensure_branch()
-
-    def ensure_branch(self) -> None:
-        if self.branch == "main":
-            return
-        refs = self.api.list_repo_refs(
-            repo_id=self.repo_id,
-            repo_type=self.repo_type,
-            token=self.token,
-        )
-        if self.branch not in {item.name for item in refs.branches}:
-            self.api.create_branch(
-                repo_id=self.repo_id,
-                repo_type=self.repo_type,
-                branch=self.branch,
-                token=self.token,
-                exist_ok=True,
+            displayed_name = (
+                path.name
+                if path
+                else task.name or
+                f"File {task.index}"
             )
 
-    def remote_path(self, file_path: Path) -> str:
-        filename = sanitize_filename(file_path.name)
-        return f"{self.path_in_repo}/{filename}" if self.path_in_repo else filename
+            done = (
+                path.stat().st_size
+                if path and path.exists()
+                else 0
+            )
 
-    def public_url(self, remote_path: str) -> str:
-        prefix = "datasets/" if self.repo_type == "dataset" else ""
-        revision = urllib.parse.quote(self.branch, safe="")
-        path = urllib.parse.quote(remote_path, safe="/")
-        return f"https://huggingface.co/{prefix}{self.repo_id}/blob/{revision}/{path}"
+            progress.update(
+                task,
+                displayed_name,
+                done,
+                0,
+                (
+                    "retrying"
+                    if attempt < RETRIES
+                    else "failed"
+                )
+            )
 
-    def upload(self, file_path: Path) -> Result:
-        remote_path = self.remote_path(file_path)
-        progress = UploadProgress(file_path, self.line)
+            if attempt < RETRIES:
+                time.sleep(
+                    min(
+                        2 ** (attempt - 1),
+                        4
+                    )
+                )
+
+    return Downloaded(
+        task,
+        work,
+        path,
+        final_error
+    )
+
+
+def extract(
+    path: Path,
+    target: Path
+) -> list[Path]:
+    target.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    lower = path.name.lower()
+
+    if lower.endswith(".zip"):
+        with zipfile.ZipFile(path) as archive:
+            archive.extractall(target)
+
+    elif lower.endswith(".rar"):
+        if rarfile is None:
+            raise RuntimeError(
+                "RAR support is unavailable"
+            )
+
+        with rarfile.RarFile(path) as archive:
+            archive.extractall(target)
+
+    elif lower.endswith((
+        ".tar",
+        ".tar.gz",
+        ".tgz",
+        ".tar.bz2",
+        ".tbz2",
+        ".tar.xz",
+        ".txz"
+    )):
+        with tarfile.open(
+            path,
+            "r:*"
+        ) as archive:
+            archive.extractall(
+                target,
+                filter="data"
+            )
+
+    elif lower.endswith(".7z"):
+        subprocess.run(
+            [
+                "7z",
+                "x",
+                "-y",
+                f"-o{target}",
+                str(path)
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE
+        )
+
+    else:
+        raise RuntimeError(
+            "unsupported archive type"
+        )
+
+    return sorted(
+        [
+            item
+            for item in target.rglob("*")
+            if (
+                item.is_file() and
+                not item.name.startswith(".")
+            )
+        ],
+        key=lambda item: item.name.lower()
+    )
+
+
+class UploadProgress:
+    def __init__(
+        self,
+        store: Store,
+        path: Path
+    ) -> None:
+        self.store = store
+        self.path = path
+        self.total = path.stat().st_size
+        self.lock = threading.Lock()
+        self.stop_event = threading.Event()
+
+        self.status = "preparing"
+        self.done = 0
+        self.speed = 0.0
+        self.last_at = time.monotonic()
+        self.last_done = 0
+
+        self.thread = threading.Thread(
+            target=self.loop,
+            daemon=True
+        )
+
+    def start(self) -> None:
+        self.thread.start()
+        self.publish()
+
+    def phase(
+        self,
+        status: str
+    ) -> None:
+        with self.lock:
+            self.status = status
+            self.done = 0
+            self.speed = 0.0
+            self.last_at = time.monotonic()
+            self.last_done = 0
+
+        self.publish()
+
+    def update(
+        self,
+        position: int
+    ) -> None:
+        with self.lock:
+            self.done = max(
+                self.done,
+                min(
+                    position,
+                    self.total
+                )
+            )
+
+    def loop(self) -> None:
+        while not self.stop_event.wait(TICK):
+            self.publish()
+
+    def publish(self) -> None:
+        with self.lock:
+            status = self.status
+            done = self.done
+
+        now = time.monotonic()
+
+        elapsed = max(
+            now - self.last_at,
+            0.001
+        )
+
+        instant_speed = max(
+            done - self.last_done,
+            0
+        ) / elapsed
+
+        if self.speed:
+            self.speed = (
+                self.speed * 0.65 +
+                instant_speed * 0.35
+            )
+        else:
+            self.speed = instant_speed
+
+        self.last_at = now
+        self.last_done = done
+
+        eta = (
+            (self.total - done) /
+            self.speed
+            if self.speed
+            else None
+        )
+
+        percent = (
+            done / self.total * 100
+            if self.total
+            else 100
+        )
+
+        self.store.set(
+            "upload",
+            {
+                "status": status,
+                "file": self.path.name,
+                "done": done,
+                "total": self.total,
+                "speed": int(self.speed),
+                "eta": eta,
+                "percent": percent
+            }
+        )
+
+    def finish(
+        self,
+        status: str
+    ) -> None:
+        with self.lock:
+            self.status = status
+
+            if status == "complete":
+                self.done = self.total
+
+        self.stop_event.set()
+        self.thread.join(1)
+        self.publish()
+
+
+class TrackedFile(io.BufferedReader):
+    def __init__(
+        self,
+        path: Path,
+        callback: Callable[[int], None]
+    ) -> None:
+        raw = open(
+            path,
+            "rb",
+            buffering=0
+        )
+
+        super().__init__(
+            raw,
+            buffer_size=CHUNK
+        )
+
+        self.callback = callback
+
+    def report(
+        self,
+        amount: int
+    ) -> None:
+        if amount > 0:
+            self.callback(
+                self.tell()
+            )
+
+    def read(
+        self,
+        size: int = -1
+    ) -> bytes:
+        data = super().read(size)
+        self.report(len(data))
+        return data
+
+    def read1(
+        self,
+        size: int = -1
+    ) -> bytes:
+        data = super().read1(size)
+        self.report(len(data))
+        return data
+
+    def readinto(
+        self,
+        buffer: Any
+    ) -> int:
+        amount = super().readinto(buffer)
+        self.report(amount or 0)
+        return amount
+
+
+class Hub:
+    def __init__(
+        self,
+        store: Store,
+        repo: str,
+        path: str,
+        branch: str,
+        repo_type: str
+    ) -> None:
+        self.store = store
+        self.repo = repo
+        self.path = path.strip("/")
+        self.branch = branch or "main"
+        self.repo_type = repo_type
+
+        self.token = os.environ.get(
+            "HF_TOKEN",
+            ""
+        ).strip()
+
+        if not self.token:
+            raise SystemExit(
+                "CONFIG ERROR | "
+                "HF_TOKEN secret is missing"
+            )
+
+        if "/" not in self.repo:
+            raise SystemExit(
+                "CONFIG ERROR | "
+                "repository must use "
+                "owner/repository format"
+            )
+
+        self.api = HfApi(
+            token=self.token
+        )
+
+        self.api.create_repo(
+            repo_id=self.repo,
+            repo_type=self.repo_type,
+            token=self.token,
+            exist_ok=True
+        )
+
+        if self.branch != "main":
+            references = self.api.list_repo_refs(
+                repo_id=self.repo,
+                repo_type=self.repo_type,
+                token=self.token
+            )
+
+            existing = {
+                reference.name
+                for reference in references.branches
+            }
+
+            if self.branch not in existing:
+                self.api.create_branch(
+                    repo_id=self.repo,
+                    repo_type=self.repo_type,
+                    branch=self.branch,
+                    token=self.token,
+                    exist_ok=True
+                )
+
+    def remote(
+        self,
+        path: Path
+    ) -> str:
+        filename = clean_name(path.name)
+
+        if self.path:
+            return (
+                f"{self.path}/"
+                f"{filename}"
+            )
+
+        return filename
+
+    def url(
+        self,
+        remote: str
+    ) -> str:
+        prefix = (
+            "datasets/"
+            if self.repo_type == "dataset"
+            else ""
+        )
+
+        revision = urllib.parse.quote(
+            self.branch,
+            safe=""
+        )
+
+        encoded_path = urllib.parse.quote(
+            remote,
+            safe="/"
+        )
+
+        return (
+            "https://huggingface.co/"
+            f"{prefix}{self.repo}/"
+            f"blob/{revision}/"
+            f"{encoded_path}"
+        )
+
+    def upload(
+        self,
+        path: Path
+    ) -> Result:
+        remote = self.remote(path)
+
+        progress = UploadProgress(
+            self.store,
+            path
+        )
+
+        progress.start()
+
+        self.store.phase(
+            f"Preparing {path.name}"
+        )
 
         try:
-            with ProgressReader(file_path, progress.update) as reader:
+            with TrackedFile(
+                path,
+                progress.update
+            ) as reader:
                 operation = CommitOperationAdd(
-                    path_in_repo=remote_path,
-                    path_or_fileobj=reader,
+                    path_in_repo=remote,
+                    path_or_fileobj=reader
                 )
-                reader.enable_tracking()
+
+                progress.phase("uploading")
+
+                self.store.phase(
+                    f"Uploading {path.name}"
+                )
+
                 self.api.create_commit(
-                    repo_id=self.repo_id,
+                    repo_id=self.repo,
                     repo_type=self.repo_type,
                     revision=self.branch,
                     operations=[operation],
-                    commit_message=f"Upload {file_path.name}",
+                    commit_message=(
+                        f"Upload {path.name}"
+                    ),
                     token=self.token,
+                    num_threads=1
                 )
 
-            progress.update(file_path.stat().st_size)
-            progress.finish()
-            url = self.public_url(remote_path)
-            self.line.message(f"SUCCESS   {url}")
-            return Result(ok=True, file=file_path.name, size=file_path.stat().st_size, url=url)
+            progress.finish("complete")
+
+            result = Result(
+                ok=True,
+                file=path.name,
+                size=path.stat().st_size,
+                url=self.url(remote)
+            )
+
+            self.store.result(result)
+            return result
 
         except Exception as exc:
-            error = str(exc).strip() or exc.__class__.__name__
-            progress.fail(error)
-            return Result(ok=False, file=file_path.name, error=error)
+            error = safe_error(exc)
+            progress.finish("failed")
+
+            self.store.error(
+                f"{path.name}: {error}"
+            )
+
+            return Result(
+                ok=False,
+                file=path.name,
+                error=error
+            )
 
 
-def write_summary(results: list[Result], uploader: HubUploader) -> None:
-    successful = [result for result in results if result.ok]
-    failed = [result for result in results if not result.ok]
+def write_summary(
+    results: list[Result],
+    hub: Hub
+) -> None:
+    successful = [
+        result
+        for result in results
+        if result.ok
+    ]
+
+    failed = [
+        result
+        for result in results
+        if not result.ok
+    ]
+
     lines = [
         "# Hugging Face Upload Summary",
         "",
-        f"- Repository: `{uploader.repo_id}`",
-        f"- Type: `{uploader.repo_type}`",
-        f"- Branch: `{uploader.branch}`",
-        f"- Destination: `{uploader.path_in_repo or '/'}`",
+        f"- Repository: `{hub.repo}`",
+        f"- Type: `{hub.repo_type}`",
+        f"- Branch: `{hub.branch}`",
+        f"- Destination: `{hub.path or '/'}`",
         f"- Successful: **{len(successful)}**",
         f"- Failed: **{len(failed)}**",
-        "",
+        ""
     ]
 
     if successful:
-        lines.extend(["## Uploaded", ""])
-        lines.extend(f"- [{item.file}]({item.url}) — {format_size(item.size)}" for item in successful)
+        lines.extend([
+            "## Uploaded",
+            ""
+        ])
+
+        lines.extend(
+            (
+                f"- [{result.file}]"
+                f"({result.url}) — "
+                f"{size_text(result.size)}"
+            )
+            for result in successful
+        )
+
         lines.append("")
 
     if failed:
-        lines.extend(["## Failed", ""])
-        lines.extend(f"- `{item.file}` — {item.error}" for item in failed)
+        lines.extend([
+            "## Failed",
+            ""
+        ])
+
+        lines.extend(
+            (
+                f"- `{result.file}` — "
+                f"{result.error}"
+            )
+            for result in failed
+        )
+
         lines.append("")
 
-    summary = "\n".join(lines)
-    Path("upload_summary.md").write_text(summary + "\n", encoding="utf-8")
-    step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    text = "\n".join(lines)
+
+    Path(
+        "upload_summary.md"
+    ).write_text(
+        text + "\n",
+        encoding="utf-8"
+    )
+
+    step_summary = os.environ.get(
+        "GITHUB_STEP_SUMMARY"
+    )
+
     if step_summary:
-        with open(step_summary, "a", encoding="utf-8") as handle:
-            handle.write(summary + "\n")
+        with open(
+            step_summary,
+            "a",
+            encoding="utf-8"
+        ) as handle:
+            handle.write(
+                text + "\n"
+            )
+
+
+def arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--repo-id",
+        required=True
+    )
+
+    parser.add_argument(
+        "--path-in-repo",
+        default=""
+    )
+
+    parser.add_argument(
+        "--branch",
+        default="main"
+    )
+
+    parser.add_argument(
+        "--repo-type",
+        choices=(
+            "model",
+            "dataset"
+        ),
+        default="model"
+    )
+
+    parser.add_argument(
+        "--download-workers",
+        type=int,
+        default=3
+    )
+
+    parser.add_argument(
+        "--dashboard-port",
+        type=int,
+        default=8787
+    )
+
+    return parser.parse_args()
 
 
 def main() -> int:
+    args = arguments()
+
+    repo = args.repo_id.strip()
+    path = args.path_in_repo.strip("/")
+    branch = args.branch.strip() or "main"
+    repo_type = args.repo_type
+
+    workers = max(
+        1,
+        min(
+            args.download_workers,
+            MAX_WORKERS
+        )
+    )
+
+    port = max(
+        1024,
+        min(
+            args.dashboard_port,
+            65535
+        )
+    )
+
     tasks = read_tasks()
-    workers = bounded_int(env("DOWNLOAD_WORKERS", "3"), 3, 1, MAX_DOWNLOAD_WORKERS)
-    line = LiveLine()
-    uploader = HubUploader(line)
-    results: list[Result] = []
 
-    for batch in chunks(tasks, workers):
-        download_progress = DownloadProgress(len(batch), line)
-        downloaded: list[DownloadedTask] = []
+    store = Store(
+        repo,
+        repo_type,
+        branch,
+        path
+    )
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(batch)) as executor:
-            futures = [executor.submit(download_task, task, download_progress) for task in batch]
-            for future in concurrent.futures.as_completed(futures):
-                downloaded.append(future.result())
+    dashboard = Dashboard(
+        store,
+        port
+    )
 
-        download_progress.finish()
-        downloaded.sort(key=lambda item: item.task.index)
+    tunnel = Tunnel(port)
+    dashboard.start()
 
-        for item in downloaded:
-            try:
-                if item.error or not item.file_path:
-                    error = item.error or "download failed"
-                    line.message(f"FAILED    {item.task.custom_filename or item.task.url} | {error}")
-                    results.append(Result(ok=False, file=item.task.custom_filename or item.task.url, error=error))
-                    continue
+    try:
+        try:
+            dashboard_url = tunnel.start()
 
-                if item.task.unzip:
-                    if not item.file_path.name.lower().endswith(ARCHIVE_EXTENSIONS):
-                        raise RuntimeError("-unzip was requested for a non-archive file")
-                    files = extract_archive(item.file_path, item.work_dir / "extracted")
-                    if not files:
-                        raise RuntimeError("archive contains no uploadable files")
-                else:
-                    files = [item.file_path]
+            print(
+                "DOWNLOAD  LIVE | "
+                f"{dashboard_url}",
+                flush=True
+            )
 
-                for file_path in files:
-                    results.append(uploader.upload(file_path))
+        except Exception as exc:
+            store.error(
+                "Dashboard unavailable: "
+                f"{safe_error(exc)}"
+            )
 
-            except Exception as exc:
-                error = str(exc).strip() or exc.__class__.__name__
-                file_name = item.file_path.name if item.file_path else item.task.url
-                line.message(f"FAILED    {file_name} | {error}")
-                results.append(Result(ok=False, file=file_name, error=error))
-            finally:
-                shutil.rmtree(item.work_dir, ignore_errors=True)
+            print(
+                "DOWNLOAD  LIVE | "
+                "dashboard unavailable; continuing",
+                flush=True
+            )
 
-    write_summary(results, uploader)
-    return 0 if results and all(result.ok for result in results) else 1
+        store.phase(
+            "Connecting to Hugging Face"
+        )
+
+        hub = Hub(
+            store,
+            repo,
+            path,
+            branch,
+            repo_type
+        )
+
+        progress = DownloadProgress(
+            store,
+            tasks
+        )
+
+        progress.start()
+
+        results: list[Result] = []
+
+        store.phase(
+            f"Downloading {len(tasks)} file(s) "
+            f"with {workers} worker(s)"
+        )
+
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=workers
+        ) as pool:
+            futures = [
+                pool.submit(
+                    download,
+                    task,
+                    progress
+                )
+                for task in tasks
+            ]
+
+            for future in concurrent.futures.as_completed(
+                futures
+            ):
+                item = future.result()
+
+                try:
+                    if item.error or not item.path:
+                        name = (
+                            item.task.name or
+                            f"File {item.task.index}"
+                        )
+
+                        error = (
+                            item.error or
+                            "download failed"
+                        )
+
+                        store.error(
+                            f"{name}: {error}"
+                        )
+
+                        results.append(
+                            Result(
+                                ok=False,
+                                file=name,
+                                error=error
+                            )
+                        )
+
+                        continue
+
+                    files = [item.path]
+
+                    if item.task.unzip:
+                        store.phase(
+                            f"Extracting "
+                            f"{item.path.name}"
+                        )
+
+                        if not (
+                            item.path.name
+                            .lower()
+                            .endswith(ARCHIVES)
+                        ):
+                            raise RuntimeError(
+                                "-unzip was requested "
+                                "for a non-archive file"
+                            )
+
+                        files = extract(
+                            item.path,
+                            item.work / "extracted"
+                        )
+
+                        if not files:
+                            raise RuntimeError(
+                                "archive contains "
+                                "no uploadable files"
+                            )
+
+                    for file in files:
+                        results.append(
+                            hub.upload(file)
+                        )
+
+                except Exception as exc:
+                    name = (
+                        item.path.name
+                        if item.path
+                        else f"File {item.task.index}"
+                    )
+
+                    error = safe_error(exc)
+
+                    store.error(
+                        f"{name}: {error}"
+                    )
+
+                    results.append(
+                        Result(
+                            ok=False,
+                            file=name,
+                            error=error
+                        )
+                    )
+
+                finally:
+                    shutil.rmtree(
+                        item.work,
+                        ignore_errors=True
+                    )
+
+        _, download_failed, _ = (
+            progress.finish()
+        )
+
+        successful = [
+            result
+            for result in results
+            if result.ok
+        ]
+
+        failed = [
+            result
+            for result in results
+            if not result.ok
+        ]
+
+        store.phase(
+            "All work completed"
+            if (
+                not failed and
+                not download_failed
+            )
+            else "Completed with errors"
+        )
+
+        write_summary(
+            results,
+            hub
+        )
+
+        uploaded_size = sum(
+            result.size
+            for result in successful
+        )
+
+        print(
+            "UPLOAD    "
+            f"{'COMPLETE' if not failed else 'PARTIAL'}"
+            " | "
+            f"{len(successful)} successful"
+            " | "
+            f"{len(failed)} failed"
+            " | "
+            f"{size_text(uploaded_size)}",
+            flush=True
+        )
+
+        if len(successful) == 1:
+            print(
+                "SUCCESS   "
+                f"{successful[0].url}",
+                flush=True
+            )
+
+        elif successful:
+            print(
+                "SUCCESS   "
+                f"{len(successful)} links are "
+                "listed in the job summary",
+                flush=True
+            )
+
+        else:
+            print(
+                "SUCCESS   no files uploaded",
+                flush=True
+            )
+
+        time.sleep(1)
+
+        return (
+            0
+            if (
+                successful and
+                not failed and
+                not download_failed
+            )
+            else 1
+        )
+
+    finally:
+        tunnel.stop()
+        dashboard.stop()
 
 
 if __name__ == "__main__":

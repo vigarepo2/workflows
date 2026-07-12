@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import concurrent.futures
-import contextlib
 import io
+import logging
 import os
 import re
 import shutil
@@ -14,97 +14,69 @@ import tempfile
 import threading
 import time
 import urllib.parse
+import warnings
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
-
-os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
-os.environ.setdefault("TQDM_DISABLE", "1")
+from typing import Any, Callable, Iterable
 
 import requests
-from huggingface_hub import HfApi, login
-
-try:
-    from huggingface_hub.utils import disable_progress_bars
-    disable_progress_bars()
-except Exception:
-    pass
+from huggingface_hub import CommitOperationAdd, HfApi
 
 try:
     import rarfile
-except Exception:
+except ImportError:
     rarfile = None
 
-try:
-    import vars as config
-except Exception as exc:
-    raise SystemExit(f"CONFIG ERROR | vars.py missing or invalid: {exc}") from exc
-
+LINKS_FILE = Path("links.txt")
+CHUNK_SIZE = 2 * 1024 * 1024
+CONNECT_TIMEOUT = 20
+READ_TIMEOUT = 180
+MAX_RETRIES = 3
+MAX_DOWNLOAD_WORKERS = 8
 ARCHIVE_EXTENSIONS = (
     ".zip", ".rar", ".7z", ".tar", ".tar.gz", ".tgz",
     ".tar.bz2", ".tbz2", ".tar.xz", ".txz",
 )
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
-
-class Log:
-    lock = threading.Lock()
-
-    @classmethod
-    def line(cls, text: str) -> None:
-        with cls.lock:
-            print(text, flush=True)
-
-    @classmethod
-    def section(cls, title: str) -> None:
-        with cls.lock:
-            print(f"\n── {title} ──", flush=True)
+logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", module="huggingface_hub")
 
 
-def cfg(name: str, default: Any = None) -> Any:
-    return getattr(config, name, default)
+def env(name: str, default: str = "") -> str:
+    return os.environ.get(name, default).strip()
 
 
-def env_or_cfg(env_name: str, cfg_name: str, default: Any = "") -> str:
-    value = os.environ.get(env_name)
-    if value is None or str(value).strip() == "":
-        value = cfg(cfg_name, default)
-    return str(value).strip()
-
-
-def require_token() -> str:
-    token_env_name = str(cfg("HF_TOKEN_ENV", "HF_TOKEN")).strip() or "HF_TOKEN"
-    token = os.environ.get(token_env_name, "").strip()
-    if not token and token_env_name != "HF_WRITE_TOKEN":
-        token = os.environ.get("HF_WRITE_TOKEN", "").strip()
-    if not token:
-        raise SystemExit(f"CONFIG ERROR | Add Hugging Face token as GitHub secret: {token_env_name}")
-    return token
-
-
-def require_authorized() -> None:
-    workflow_confirmed = os.environ.get("CONFIRM_RIGHTS", "").strip().lower() == "true"
-    config_confirmed = bool(cfg("AUTHORIZED_ONLY", False))
-    if not workflow_confirmed and not config_confirmed:
-        raise SystemExit("CONFIG ERROR | Set AUTHORIZED_ONLY=True in vars.py for files you own or have permission to upload.")
-
-
-def as_int(value: Any, default: int, minimum: int = 1, maximum: int = 10) -> int:
+def bounded_int(value: str, default: int, minimum: int, maximum: int) -> int:
     try:
-        number = int(str(value).strip())
-    except Exception:
-        number = default
-    return max(minimum, min(number, maximum))
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(minimum, min(parsed, maximum))
 
 
-def format_size(size_bytes: int) -> str:
-    units = ["B", "KB", "MB", "GB", "TB"]
-    value = float(size_bytes or 0)
+def format_size(size: int | float) -> str:
+    units = ("B", "KB", "MB", "GB", "TB")
+    value = float(max(size, 0))
     index = 0
     while value >= 1024 and index < len(units) - 1:
         value /= 1024
         index += 1
     return f"{value:.1f} {units[index]}"
+
+
+def format_duration(seconds: float) -> str:
+    seconds = max(0, int(seconds))
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes:02d}:{seconds:02d}"
+
+
+def progress_bar(percent: float, width: int = 18) -> str:
+    percent = max(0.0, min(percent, 100.0))
+    filled = int(width * percent / 100)
+    return "█" * filled + "░" * (width - filled)
 
 
 def sanitize_filename(filename: str) -> str:
@@ -122,369 +94,538 @@ def unique_path(folder: Path, filename: str) -> Path:
     stem, suffix = candidate.stem, candidate.suffix
     counter = 1
     while True:
-        next_candidate = folder / f"{stem}_{counter}{suffix}"
-        if not next_candidate.exists():
-            return next_candidate
+        candidate = folder / f"{stem}_{counter}{suffix}"
+        if not candidate.exists():
+            return candidate
         counter += 1
 
 
-def parse_line(line: str) -> Optional[Dict[str, Any]]:
+def filename_from_response(response: requests.Response) -> str:
+    disposition = response.headers.get("content-disposition", "")
+    patterns = (
+        r"filename\*=UTF-8''([^;]+)",
+        r'filename="([^"]+)"',
+        r"filename=([^;]+)",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, disposition, re.IGNORECASE)
+        if match:
+            filename = sanitize_filename(match.group(1).strip(" '\""))
+            if len(filename) > 2:
+                return filename
+
+    filename = sanitize_filename(Path(urllib.parse.urlparse(response.url).path).name)
+    return filename if "." in filename else f"download_{int(time.time())}.bin"
+
+
+class LiveLine:
+    def __init__(self, interval: float = 0.20) -> None:
+        self.interval = interval
+        self.last_render = 0.0
+        self.lock = threading.Lock()
+        self.open = False
+
+    def update(self, text: str, force: bool = False) -> None:
+        now = time.monotonic()
+        with self.lock:
+            if not force and now - self.last_render < self.interval:
+                return
+            sys.stdout.write(f"\r\033[2K{text}")
+            sys.stdout.flush()
+            self.last_render = now
+            self.open = True
+
+    def finish(self, text: str) -> None:
+        with self.lock:
+            sys.stdout.write(f"\r\033[2K{text}\n")
+            sys.stdout.flush()
+            self.last_render = time.monotonic()
+            self.open = False
+
+    def message(self, text: str) -> None:
+        with self.lock:
+            if self.open:
+                sys.stdout.write("\n")
+                self.open = False
+            print(text, flush=True)
+
+
+@dataclass(frozen=True)
+class Task:
+    index: int
+    url: str
+    custom_filename: str | None
+    unzip: bool
+
+
+@dataclass
+class DownloadedTask:
+    task: Task
+    work_dir: Path
+    file_path: Path | None = None
+    error: str | None = None
+
+
+@dataclass
+class Result:
+    ok: bool
+    file: str
+    size: int = 0
+    url: str = ""
+    error: str = ""
+
+
+def parse_line(line: str, index: int) -> Task | None:
     raw = line.strip()
     if not raw or raw.startswith("#"):
         return None
 
-    unzip = False
-    work = raw
-    if work.lower().endswith(" -unzip"):
-        unzip = True
-        work = work[: -len(" -unzip")].strip()
+    unzip = raw.lower().endswith(" -unzip")
+    if unzip:
+        raw = raw[: -len(" -unzip")].strip()
 
     custom_filename = None
-    if " -n " in work:
-        url, custom_filename = work.split(" -n ", 1)
+    if " -n " in raw:
+        url, custom_filename = raw.split(" -n ", 1)
         custom_filename = sanitize_filename(custom_filename.strip())
     else:
-        url = work
+        url = raw
 
     url = url.strip()
     if not url.startswith(("http://", "https://")):
-        raise ValueError(f"invalid URL: {raw}")
+        raise ValueError("URL must start with http:// or https://")
 
-    return {"raw": raw, "url": url, "custom_filename": custom_filename, "unzip": unzip}
+    return Task(index=index, url=url, custom_filename=custom_filename, unzip=unzip)
 
 
-def read_tasks(path: Path) -> List[Dict[str, Any]]:
-    if not path.exists():
-        raise SystemExit(f"INPUT ERROR | Missing {path}")
-    tasks: List[Dict[str, Any]] = []
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+def read_tasks() -> list[Task]:
+    if not LINKS_FILE.is_file():
+        raise SystemExit("INPUT ERROR | links.txt is missing")
+
+    tasks: list[Task] = []
+    for line_number, line in enumerate(LINKS_FILE.read_text(encoding="utf-8").splitlines(), 1):
         try:
-            task = parse_line(line)
-            if task:
-                task["index"] = len(tasks) + 1
-                tasks.append(task)
-        except Exception as exc:
+            task = parse_line(line, len(tasks) + 1)
+        except ValueError as exc:
             raise SystemExit(f"INPUT ERROR | links.txt line {line_number}: {exc}") from exc
+        if task:
+            tasks.append(task)
+
     if not tasks:
-        raise SystemExit("INPUT ERROR | No valid links found in links.txt")
+        raise SystemExit("INPUT ERROR | links.txt contains no valid URLs")
     return tasks
 
 
-def filename_from_headers(url: str) -> str:
-    headers = {"User-Agent": USER_AGENT}
-    timeout = as_int(cfg("REQUEST_TIMEOUT", 60), 60, 10, 300)
-    try:
-        response = requests.head(url, headers=headers, allow_redirects=True, timeout=timeout)
-        cd = response.headers.get("content-disposition", "")
-        for pattern in (r"filename\*=UTF-8''([^;]+)", r'filename="([^"]+)"', r"filename=([^;]+)"):
-            match = re.search(pattern, cd, re.IGNORECASE)
-            if match:
-                filename = sanitize_filename(match.group(1).strip(" '\""))
-                if len(filename) > 2:
-                    return filename
-    except Exception:
-        pass
+class DownloadProgress:
+    def __init__(self, total_files: int, line: LiveLine) -> None:
+        self.total_files = total_files
+        self.line = line
+        self.started = time.monotonic()
+        self.lock = threading.Lock()
+        self.states: dict[int, dict[str, Any]] = {}
 
-    parsed = urllib.parse.urlparse(url)
-    filename = sanitize_filename(os.path.basename(parsed.path))
-    if "." in filename and len(filename) > 2:
-        return filename
-    return f"download_{int(time.time())}.bin"
+    def update(self, task: Task, filename: str, downloaded: int, total: int, status: str = "active") -> None:
+        with self.lock:
+            self.states[task.index] = {
+                "filename": filename,
+                "downloaded": downloaded,
+                "total": total,
+                "status": status,
+            }
+            self._render()
 
+    def _render(self, force: bool = False) -> None:
+        downloaded = sum(int(item["downloaded"]) for item in self.states.values())
+        known_total = sum(int(item["total"]) for item in self.states.values() if int(item["total"]) > 0)
+        unknown = (self.total_files - len(self.states)) + sum(
+            1 for item in self.states.values() if int(item["total"]) <= 0
+        )
+        complete = sum(1 for item in self.states.values() if item["status"] == "done")
+        failed = sum(1 for item in self.states.values() if item["status"] == "failed")
+        elapsed = max(time.monotonic() - self.started, 0.001)
+        speed = downloaded / elapsed
 
-def with_heartbeat(label: str, func: Callable[[], Any]) -> Any:
-    quiet = bool(cfg("QUIET_LOGS", True))
-    if not quiet:
-        return func()
+        if known_total and unknown == 0:
+            percent = min(downloaded / known_total * 100, 100.0)
+            remaining = max(known_total - downloaded, 0)
+            eta = format_duration(remaining / speed) if speed > 0 else "--:--"
+            text = (
+                f"DOWNLOAD  {progress_bar(percent)} {percent:5.1f}% | "
+                f"{complete}/{self.total_files} files | {format_size(downloaded)}/{format_size(known_total)} | "
+                f"{format_size(speed)}/s | ETA {eta}"
+            )
+        else:
+            text = (
+                f"DOWNLOAD  {complete}/{self.total_files} files | {format_size(downloaded)} | "
+                f"{format_size(speed)}/s"
+            )
+        if failed:
+            text += f" | {failed} failed"
+        self.line.update(text, force=force)
 
-    stop = threading.Event()
-    started = time.time()
-
-    def beat() -> None:
-        while not stop.wait(90):
-            elapsed = int(time.time() - started)
-            Log.line(f"{label} | still running | {elapsed}s")
-
-    thread = threading.Thread(target=beat, daemon=True)
-    thread.start()
-    try:
-        return func()
-    finally:
-        stop.set()
-
-
-def download_with_aria2(url: str, output_path: Path) -> bool:
-    if str(cfg("DOWNLOAD_ENGINE", "aria2")).lower() not in {"aria2", "auto"}:
-        return False
-    if not shutil.which("aria2c"):
-        return False
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        "aria2c",
-        "--quiet=true",
-        "--show-console-readout=false",
-        "--summary-interval=0",
-        "--allow-overwrite=true",
-        "--auto-file-renaming=false",
-        "--continue=true",
-        "--check-certificate=false",
-        "--file-allocation=none",
-        "--max-connection-per-server=16",
-        "--split=16",
-        "--min-split-size=1M",
-        "-d", str(output_path.parent),
-        "-o", output_path.name,
-        url,
-    ]
-
-    def run() -> None:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-
-    try:
-        with_heartbeat(f"DOWNLOAD {output_path.name}", run)
-        return output_path.exists() and output_path.stat().st_size > 0
-    except subprocess.CalledProcessError as exc:
-        err = (exc.stderr or "").strip()
-        Log.line(f"DOWNLOAD | aria2 fallback | {err[-500:] if err else exc}")
-        return False
-    except Exception as exc:
-        Log.line(f"DOWNLOAD | aria2 fallback | {exc}")
-        return False
+    def finish(self) -> None:
+        with self.lock:
+            downloaded = sum(int(item["downloaded"]) for item in self.states.values())
+            complete = sum(1 for item in self.states.values() if item["status"] == "done")
+            failed = sum(1 for item in self.states.values() if item["status"] == "failed")
+            state = "COMPLETE" if failed == 0 else "PARTIAL"
+            text = (
+                f"DOWNLOAD  {state} | {complete}/{self.total_files} files | "
+                f"{format_size(downloaded)} | {format_duration(time.monotonic() - self.started)}"
+            )
+            if failed:
+                text += f" | {failed} failed"
+            self.line.finish(text)
 
 
-def download_with_requests(url: str, output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    headers = {"User-Agent": USER_AGENT}
-    timeout = as_int(cfg("REQUEST_TIMEOUT", 60), 60, 10, 300)
-    chunk_size = as_int(cfg("CHUNK_SIZE_MB", 1), 1, 1, 16) * 1024 * 1024
-    last_report = 0.0
+class UploadProgress:
+    def __init__(self, file_path: Path, line: LiveLine) -> None:
+        self.file_path = file_path
+        self.total = file_path.stat().st_size
+        self.line = line
+        self.started = time.monotonic()
+        self.maximum = 0
+        self.lock = threading.Lock()
+        self.line.update(
+            f"UPLOAD    PREPARING | {file_path.name} | {format_size(self.total)}",
+            force=True,
+        )
 
-    with requests.get(url, headers=headers, stream=True, timeout=timeout) as response:
-        response.raise_for_status()
-        total = int(response.headers.get("content-length", 0) or 0)
-        downloaded = 0
-        with output_path.open("wb") as handle:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if not chunk:
-                    continue
-                handle.write(chunk)
-                downloaded += len(chunk)
-                now = time.time()
-                if not bool(cfg("QUIET_LOGS", True)) and now - last_report >= 10:
-                    percent = f"{downloaded / total * 100:.1f}%" if total else "unknown"
-                    Log.line(f"DOWNLOAD | {output_path.name} | {format_size(downloaded)} / {format_size(total)} | {percent}")
-                    last_report = now
+    def update(self, position: int) -> None:
+        with self.lock:
+            self.maximum = max(self.maximum, min(position, self.total))
+            elapsed = max(time.monotonic() - self.started, 0.001)
+            speed = self.maximum / elapsed
+            percent = self.maximum / self.total * 100 if self.total else 100.0
+            remaining = max(self.total - self.maximum, 0)
+            eta = format_duration(remaining / speed) if speed > 0 else "--:--"
+            self.line.update(
+                f"UPLOAD    {progress_bar(percent)} {percent:5.1f}% | {self.file_path.name} | "
+                f"{format_size(self.maximum)}/{format_size(self.total)} | {format_size(speed)}/s | ETA {eta}"
+            )
+
+    def finish(self) -> None:
+        self.line.finish(
+            f"UPLOAD    COMPLETE | {self.file_path.name} | {format_size(self.total)} | "
+            f"{format_duration(time.monotonic() - self.started)}"
+        )
+
+    def fail(self, error: str) -> None:
+        self.line.finish(f"UPLOAD    FAILED | {self.file_path.name} | {error}")
 
 
-def download_file(url: str, output_path: Path) -> None:
-    started = time.time()
-    if not download_with_aria2(url, output_path):
-        download_with_requests(url, output_path)
-    if not output_path.exists() or output_path.stat().st_size == 0:
-        raise RuntimeError(f"download failed or empty file: {output_path.name}")
-    Log.line(f"DOWNLOAD | done | {output_path.name} | {format_size(output_path.stat().st_size)} | {time.time() - started:.1f}s")
+class ProgressReader(io.BufferedReader):
+    def __init__(self, path: Path, callback: Callable[[int], None]) -> None:
+        raw = open(path, "rb", buffering=0)
+        super().__init__(raw, buffer_size=CHUNK_SIZE)
+        self.callback = callback
+        self.tracking = False
+
+    def enable_tracking(self) -> None:
+        self.tracking = True
+
+    def read(self, size: int = -1) -> bytes:
+        data = super().read(size)
+        if self.tracking and data:
+            self.callback(self.tell())
+        return data
 
 
-def copy_stream(source: Any, member_name: str, extract_dir: Path) -> Path:
-    destination = unique_path(extract_dir, member_name)
-    with destination.open("wb") as target:
+def download_task(task: Task, progress: DownloadProgress) -> DownloadedTask:
+    work_dir = Path(tempfile.mkdtemp(prefix=f"hf_task_{task.index}_"))
+    output_path: Path | None = None
+    last_error = "Unknown download error"
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            existing = output_path.stat().st_size if output_path and output_path.exists() else 0
+            headers = {"User-Agent": USER_AGENT}
+            if existing:
+                headers["Range"] = f"bytes={existing}-"
+
+            with requests.get(
+                task.url,
+                headers=headers,
+                stream=True,
+                allow_redirects=True,
+                timeout=(CONNECT_TIMEOUT, READ_TIMEOUT),
+            ) as response:
+                if response.status_code == 416 and output_path and output_path.exists():
+                    progress.update(task, output_path.name, existing, existing, "done")
+                    return DownloadedTask(task=task, work_dir=work_dir, file_path=output_path)
+
+                response.raise_for_status()
+
+                if output_path is None:
+                    filename = task.custom_filename or filename_from_response(response)
+                    output_path = unique_path(work_dir / "downloads", filename)
+                    existing = 0
+
+                resumed = existing > 0 and response.status_code == 206
+                if not resumed:
+                    existing = 0
+
+                content_length = int(response.headers.get("content-length", "0") or 0)
+                total = existing + content_length if content_length else 0
+                downloaded = existing
+                mode = "ab" if resumed else "wb"
+                progress.update(task, output_path.name, downloaded, total)
+
+                with output_path.open(mode) as handle:
+                    for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+                        if not chunk:
+                            continue
+                        handle.write(chunk)
+                        downloaded += len(chunk)
+                        progress.update(task, output_path.name, downloaded, total)
+
+                if output_path.stat().st_size == 0:
+                    raise RuntimeError("server returned an empty file")
+                if total and output_path.stat().st_size < total:
+                    raise RuntimeError("connection closed before the download completed")
+
+                final_size = output_path.stat().st_size
+                progress.update(task, output_path.name, final_size, total or final_size, "done")
+                return DownloadedTask(task=task, work_dir=work_dir, file_path=output_path)
+
+        except Exception as exc:
+            last_error = str(exc).strip() or exc.__class__.__name__
+            if attempt < MAX_RETRIES:
+                time.sleep(min(2 ** (attempt - 1), 4))
+
+    filename = output_path.name if output_path else task.custom_filename or f"task-{task.index}"
+    current_size = output_path.stat().st_size if output_path and output_path.exists() else 0
+    progress.update(task, filename, current_size, current_size, "failed")
+    return DownloadedTask(task=task, work_dir=work_dir, file_path=output_path, error=last_error)
+
+
+def copy_member(source: Any, member_name: str, destination: Path) -> Path:
+    output = unique_path(destination, Path(member_name).name)
+    with output.open("wb") as target:
         shutil.copyfileobj(source, target)
-    return destination
+    return output
 
 
-def extract_archive(archive_path: Path, extract_dir: Path) -> List[Path]:
-    archive_name = archive_path.name.lower()
-    extracted: List[Path] = []
-    extract_dir.mkdir(parents=True, exist_ok=True)
-    started = time.time()
+def extract_archive(archive: Path, destination: Path) -> list[Path]:
+    destination.mkdir(parents=True, exist_ok=True)
+    name = archive.name.lower()
+    extracted: list[Path] = []
 
-    if archive_name.endswith(".zip"):
-        with zipfile.ZipFile(archive_path, "r") as zip_ref:
-            for member in zip_ref.infolist():
-                if not member.is_dir() and not os.path.basename(member.filename).startswith("."):
-                    with zip_ref.open(member) as source:
-                        extracted.append(copy_stream(source, member.filename, extract_dir))
-    elif archive_name.endswith(".rar"):
+    if name.endswith(".zip"):
+        with zipfile.ZipFile(archive) as package:
+            for member in package.infolist():
+                if not member.is_dir() and not Path(member.filename).name.startswith("."):
+                    with package.open(member) as source:
+                        extracted.append(copy_member(source, member.filename, destination))
+
+    elif name.endswith(".rar"):
         if rarfile is None:
-            raise RuntimeError("rarfile is not installed")
-        with rarfile.RarFile(archive_path, "r") as rar_ref:
-            for member in rar_ref.infolist():
-                if not member.isdir() and not os.path.basename(member.filename).startswith("."):
-                    with rar_ref.open(member) as source:
-                        extracted.append(copy_stream(source, member.filename, extract_dir))
-    elif archive_name.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz")):
-        with tarfile.open(archive_path, "r:*") as tar_ref:
-            for member in tar_ref.getmembers():
-                if member.isfile() and not os.path.basename(member.name).startswith("."):
-                    source = tar_ref.extractfile(member)
+            raise RuntimeError("RAR support is unavailable")
+        with rarfile.RarFile(archive) as package:
+            for member in package.infolist():
+                if not member.isdir() and not Path(member.filename).name.startswith("."):
+                    with package.open(member) as source:
+                        extracted.append(copy_member(source, member.filename, destination))
+
+    elif name.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz")):
+        with tarfile.open(archive, "r:*") as package:
+            for member in package.getmembers():
+                if member.isfile() and not Path(member.name).name.startswith("."):
+                    source = package.extractfile(member)
                     if source:
-                        extracted.append(copy_stream(source, member.name, extract_dir))
-    elif archive_name.endswith(".7z"):
+                        with source:
+                            extracted.append(copy_member(source, member.name, destination))
+
+    elif name.endswith(".7z"):
         if not shutil.which("7z"):
-            raise RuntimeError("7z command is not installed")
-        temp_dir = extract_dir / "sevenzip_tmp"
-        temp_dir.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["7z", "x", "-y", f"-o{temp_dir}", str(archive_path)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-        for file_path in temp_dir.rglob("*"):
-            if file_path.is_file() and not file_path.name.startswith("."):
-                destination = unique_path(extract_dir, file_path.name)
-                shutil.move(str(file_path), destination)
-                extracted.append(destination)
-        shutil.rmtree(temp_dir, ignore_errors=True)
+            raise RuntimeError("7z is not installed")
+        subprocess.run(
+            ["7z", "e", "-y", f"-o{destination}", str(archive)],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        extracted = [path for path in destination.iterdir() if path.is_file() and not path.name.startswith(".")]
+
     else:
-        raise RuntimeError(f"unsupported archive type: {archive_path.name}")
+        raise RuntimeError(f"unsupported archive type: {archive.name}")
 
-    extracted.sort(key=lambda path: path.name.lower())
-    Log.line(f"EXTRACT | done | {archive_path.name} | {len(extracted)} files | {time.time() - started:.1f}s")
-    return extracted
+    return sorted(extracted, key=lambda path: path.name.lower())
 
 
-class Uploader:
-    def __init__(self) -> None:
-        require_authorized()
-        self.token = require_token()
-        self.repo_id = env_or_cfg("REPO_ID", "REPO_ID", "DevDoCode/DDL2")
-        self.path_in_repo = env_or_cfg("PATH_IN_REPO", "PATH_IN_REPO", "cdn/movies").strip("/")
-        self.branch = env_or_cfg("BRANCH", "BRANCH", "movies") or "movies"
-        self.repo_type = env_or_cfg("REPO_TYPE", "REPO_TYPE", "model") or "model"
-        self.api = HfApi()
+def chunks(items: list[Task], size: int) -> Iterable[list[Task]]:
+    for start in range(0, len(items), size):
+        yield items[start : start + size]
 
-        Log.section("HF UPLOADER")
-        Log.line(f"TARGET | repo={self.repo_id} | branch={self.branch} | path={self.path_in_repo or '[root]'} | type={self.repo_type}")
-        login(token=self.token, add_to_git_credential=False)
-        self.api.create_repo(repo_id=self.repo_id, repo_type=self.repo_type, token=self.token, exist_ok=True)
+
+class HubUploader:
+    def __init__(self, line: LiveLine) -> None:
+        self.token = env("HF_TOKEN")
+        self.repo_id = env("HF_REPO_ID")
+        self.path_in_repo = env("HF_PATH_IN_REPO").strip("/")
+        self.branch = env("HF_BRANCH", "main") or "main"
+        self.repo_type = env("HF_REPO_TYPE", "model").lower() or "model"
+        self.line = line
+
+        if not self.token:
+            raise SystemExit("CONFIG ERROR | HF_TOKEN secret is missing")
+        if not self.repo_id or "/" not in self.repo_id:
+            raise SystemExit("CONFIG ERROR | Repository ID must use owner/repository format")
+        if self.repo_type not in {"model", "dataset"}:
+            raise SystemExit("CONFIG ERROR | Repository type must be model or dataset")
+
+        self.api = HfApi(token=self.token)
+        self.api.create_repo(
+            repo_id=self.repo_id,
+            repo_type=self.repo_type,
+            token=self.token,
+            exist_ok=True,
+        )
         self.ensure_branch()
 
     def ensure_branch(self) -> None:
         if self.branch == "main":
             return
-        try:
-            refs = self.api.list_repo_refs(repo_id=self.repo_id, repo_type=self.repo_type, token=self.token)
-            existing = {branch.name for branch in refs.branches}
-            if self.branch not in existing:
-                self.api.create_branch(repo_id=self.repo_id, branch=self.branch, repo_type=self.repo_type, token=self.token)
-                Log.line(f"BRANCH | created | {self.branch}")
-        except Exception as exc:
-            Log.line(f"BRANCH | fallback main | {exc}")
-            self.branch = "main"
+        refs = self.api.list_repo_refs(
+            repo_id=self.repo_id,
+            repo_type=self.repo_type,
+            token=self.token,
+        )
+        if self.branch not in {item.name for item in refs.branches}:
+            self.api.create_branch(
+                repo_id=self.repo_id,
+                repo_type=self.repo_type,
+                branch=self.branch,
+                token=self.token,
+                exist_ok=True,
+            )
 
     def remote_path(self, file_path: Path) -> str:
         filename = sanitize_filename(file_path.name)
         return f"{self.path_in_repo}/{filename}" if self.path_in_repo else filename
 
-    def upload_file(self, file_path: Path) -> Dict[str, Any]:
-        remote = self.remote_path(file_path)
-        file_size = file_path.stat().st_size
-        started = time.time()
-        Log.line(f"UPLOAD | start | {file_path.name} | {format_size(file_size)}")
+    def public_url(self, remote_path: str) -> str:
+        prefix = "datasets/" if self.repo_type == "dataset" else ""
+        revision = urllib.parse.quote(self.branch, safe="")
+        path = urllib.parse.quote(remote_path, safe="/")
+        return f"https://huggingface.co/{prefix}{self.repo_id}/blob/{revision}/{path}"
 
-        captured = io.StringIO()
-
-        def do_upload() -> None:
-            self.api.upload_file(
-                path_or_fileobj=str(file_path),
-                path_in_repo=remote,
-                repo_id=self.repo_id,
-                repo_type=self.repo_type,
-                revision=self.branch,
-                token=self.token,
-                commit_message=f"Upload {file_path.name}",
-            )
+    def upload(self, file_path: Path) -> Result:
+        remote_path = self.remote_path(file_path)
+        progress = UploadProgress(file_path, self.line)
 
         try:
-            if bool(cfg("QUIET_LOGS", True)):
-                with contextlib.redirect_stdout(captured), contextlib.redirect_stderr(captured):
-                    with_heartbeat(f"UPLOAD {file_path.name}", do_upload)
-            else:
-                do_upload()
+            with ProgressReader(file_path, progress.update) as reader:
+                operation = CommitOperationAdd(
+                    path_in_repo=remote_path,
+                    path_or_fileobj=reader,
+                )
+                reader.enable_tracking()
+                self.api.create_commit(
+                    repo_id=self.repo_id,
+                    repo_type=self.repo_type,
+                    revision=self.branch,
+                    operations=[operation],
+                    commit_message=f"Upload {file_path.name}",
+                    token=self.token,
+                )
+
+            progress.update(file_path.stat().st_size)
+            progress.finish()
+            url = self.public_url(remote_path)
+            self.line.message(f"SUCCESS   {url}")
+            return Result(ok=True, file=file_path.name, size=file_path.stat().st_size, url=url)
+
         except Exception as exc:
-            hidden = captured.getvalue().strip()
-            if hidden:
-                Log.line(f"UPLOAD | details | {hidden[-1200:]}")
-            raise exc
-
-        url = f"https://huggingface.co/{self.repo_id}/blob/{self.branch}/{remote}"
-        Log.line(f"UPLOAD | done | {file_path.name} | {time.time() - started:.1f}s")
-        return {"ok": True, "file": file_path.name, "size": file_size, "url": url}
-
-    def process(self, task: Dict[str, Any], total: int) -> List[Dict[str, Any]]:
-        number = int(task["index"])
-        work_dir = Path(tempfile.mkdtemp(prefix="hf_upload_"))
-        try:
-            filename = str(task.get("custom_filename") or filename_from_headers(str(task["url"])))
-            Log.section(f"TASK {number}/{total}")
-            Log.line(f"FILE | {filename}")
-            download_path = unique_path(work_dir / "downloads", filename)
-            download_file(str(task["url"]), download_path)
-
-            if task.get("unzip") and download_path.name.lower().endswith(ARCHIVE_EXTENSIONS):
-                files = extract_archive(download_path, work_dir / "extracted")
-            else:
-                if task.get("unzip"):
-                    Log.line("EXTRACT | skipped | downloaded file is not an archive")
-                files = [download_path]
-
-            if not files:
-                raise RuntimeError("no files found to upload")
-
-            result = [self.upload_file(file_path) for file_path in files]
-            Log.line(f"TASK {number}/{total} | done")
-            return result
-        except Exception as exc:
-            Log.line(f"TASK {number}/{total} | failed | {exc}")
-            return [{"ok": False, "file": str(task.get("custom_filename") or task.get("url")), "error": str(exc)}]
-        finally:
-            if bool(cfg("DELETE_LOCAL_AFTER_UPLOAD", True)):
-                shutil.rmtree(work_dir, ignore_errors=True)
+            error = str(exc).strip() or exc.__class__.__name__
+            progress.fail(error)
+            return Result(ok=False, file=file_path.name, error=error)
 
 
-def write_summary(results: List[Dict[str, Any]]) -> None:
-    success = [item for item in results if item.get("ok")]
-    failed = [item for item in results if not item.get("ok")]
-    lines = ["# Hugging Face Upload Summary", "", f"Successful: {len(success)}", f"Failed: {len(failed)}", ""]
-    if success:
-        lines.append("## Uploaded")
-        for item in success:
-            lines.append(f"- `{item['file']}` — {format_size(int(item['size']))} — {item['url']}")
+def write_summary(results: list[Result], uploader: HubUploader) -> None:
+    successful = [result for result in results if result.ok]
+    failed = [result for result in results if not result.ok]
+    lines = [
+        "# Hugging Face Upload Summary",
+        "",
+        f"- Repository: `{uploader.repo_id}`",
+        f"- Type: `{uploader.repo_type}`",
+        f"- Branch: `{uploader.branch}`",
+        f"- Destination: `{uploader.path_in_repo or '/'}`",
+        f"- Successful: **{len(successful)}**",
+        f"- Failed: **{len(failed)}**",
+        "",
+    ]
+
+    if successful:
+        lines.extend(["## Uploaded", ""])
+        lines.extend(f"- [{item.file}]({item.url}) — {format_size(item.size)}" for item in successful)
         lines.append("")
+
     if failed:
-        lines.append("## Failed")
-        for item in failed:
-            lines.append(f"- `{item.get('file', 'unknown')}` — {item.get('error', 'Unknown error')}")
+        lines.extend(["## Failed", ""])
+        lines.extend(f"- `{item.file}` — {item.error}" for item in failed)
         lines.append("")
-    text = "\n".join(lines)
-    Path("upload_summary.md").write_text(text + "\n", encoding="utf-8")
-    Log.section("SUMMARY")
-    Log.line(f"SUCCESS | {len(success)}")
-    Log.line(f"FAILED  | {len(failed)}")
+
+    summary = "\n".join(lines)
+    Path("upload_summary.md").write_text(summary + "\n", encoding="utf-8")
     step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if step_summary:
         with open(step_summary, "a", encoding="utf-8") as handle:
-            handle.write(text + "\n")
+            handle.write(summary + "\n")
 
 
 def main() -> int:
-    links_file = Path(env_or_cfg("LINKS_FILE", "LINKS_FILE", "links.txt"))
-    tasks = read_tasks(links_file)
-    max_workers = as_int(os.environ.get("MAX_WORKERS") or cfg("MAX_WORKERS", 1), 1, 1, 10)
+    tasks = read_tasks()
+    workers = bounded_int(env("DOWNLOAD_WORKERS", "3"), 3, 1, MAX_DOWNLOAD_WORKERS)
+    line = LiveLine()
+    uploader = HubUploader(line)
+    results: list[Result] = []
 
-    uploader = Uploader()
-    Log.line(f"QUEUE | tasks={len(tasks)} | concurrent_tasks={max_workers}")
+    for batch in chunks(tasks, workers):
+        download_progress = DownloadProgress(len(batch), line)
+        downloaded: list[DownloadedTask] = []
 
-    results: List[Dict[str, Any]] = []
-    if max_workers == 1:
-        for task in tasks:
-            results.extend(uploader.process(task, len(tasks)))
-    else:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(uploader.process, task, len(tasks)) for task in tasks]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(batch)) as executor:
+            futures = [executor.submit(download_task, task, download_progress) for task in batch]
             for future in concurrent.futures.as_completed(futures):
-                results.extend(future.result())
+                downloaded.append(future.result())
 
-    write_summary(results)
-    return 0 if all(item.get("ok") for item in results) else 1
+        download_progress.finish()
+        downloaded.sort(key=lambda item: item.task.index)
+
+        for item in downloaded:
+            try:
+                if item.error or not item.file_path:
+                    error = item.error or "download failed"
+                    line.message(f"FAILED    {item.task.custom_filename or item.task.url} | {error}")
+                    results.append(Result(ok=False, file=item.task.custom_filename or item.task.url, error=error))
+                    continue
+
+                if item.task.unzip:
+                    if not item.file_path.name.lower().endswith(ARCHIVE_EXTENSIONS):
+                        raise RuntimeError("-unzip was requested for a non-archive file")
+                    files = extract_archive(item.file_path, item.work_dir / "extracted")
+                    if not files:
+                        raise RuntimeError("archive contains no uploadable files")
+                else:
+                    files = [item.file_path]
+
+                for file_path in files:
+                    results.append(uploader.upload(file_path))
+
+            except Exception as exc:
+                error = str(exc).strip() or exc.__class__.__name__
+                file_name = item.file_path.name if item.file_path else item.task.url
+                line.message(f"FAILED    {file_name} | {error}")
+                results.append(Result(ok=False, file=file_name, error=error))
+            finally:
+                shutil.rmtree(item.work_dir, ignore_errors=True)
+
+    write_summary(results, uploader)
+    return 0 if results and all(result.ok for result in results) else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

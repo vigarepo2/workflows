@@ -1,7 +1,7 @@
 HF_TOKEN_ENV = "HF_TOKEN"
 REPO_ID = "DevDoCode/DDL2"
-PATH_IN_REPO = "cdn/series"
-BRANCH = "series"
+PATH_IN_REPO = "content/cdn/v1"
+BRANCH = "movies"
 REPO_TYPE = "model"
 LINKS_FILE = "links.txt"
 MAX_WORKERS = 1

@@ -1,4 +1,5 @@
 name: Hugging Face Uploader
+
 run-name: Upload to ${{ inputs.repo_id }} · ${{ inputs.branch }}
 
 on:
@@ -9,16 +10,19 @@ on:
         required: true
         default: DevDoCode/DDL2
         type: string
+
       path_in_repo:
         description: Destination folder inside the Hugging Face repository
         required: false
         default: content/cdn/v1
         type: string
+
       branch:
         description: Hugging Face target branch
         required: true
         default: movies
         type: string
+
       repo_type:
         description: Hugging Face repository type
         required: true
@@ -27,6 +31,7 @@ on:
         options:
           - model
           - dataset
+
       download_workers:
         description: Files downloaded concurrently; higher values use more runner storage
         required: true
@@ -39,6 +44,7 @@ on:
           - "4"
           - "6"
           - "8"
+
       confirm_rights:
         description: I own or have permission to upload every file in links.txt
         required: true
@@ -60,49 +66,101 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     timeout-minutes: 360
+
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
-      HF_REPO_ID: ${{ inputs.repo_id }}
-      HF_PATH_IN_REPO: ${{ inputs.path_in_repo }}
-      HF_BRANCH: ${{ inputs.branch }}
-      HF_REPO_TYPE: ${{ inputs.repo_type }}
-      DOWNLOAD_WORKERS: ${{ inputs.download_workers }}
       PYTHONUNBUFFERED: "1"
       HF_HUB_VERBOSITY: error
+      HF_HUB_DISABLE_PROGRESS_BARS: "1"
       HF_HUB_DISABLE_TELEMETRY: "1"
+      NO_COLOR: "1"
 
     steps:
-      - name: Checkout hf-uploader
+      - name: Checkout uploader branch
         uses: actions/checkout@v4
         with:
           ref: hf-uploader
 
       - name: Validate inputs
+        env:
+          INPUT_REPO_ID: ${{ inputs.repo_id }}
+          INPUT_BRANCH: ${{ inputs.branch }}
+          CONFIRM_RIGHTS: ${{ inputs.confirm_rights }}
+
         run: |
-          [[ "${{ inputs.confirm_rights }}" == "true" ]] || { echo "::error::Permission confirmation is required."; exit 1; }
-          [[ -f huggingface.py ]] || { echo "::error::huggingface.py is missing."; exit 1; }
-          [[ -s links.txt ]] || { echo "::error::links.txt is missing or empty."; exit 1; }
-          [[ -n "$HF_TOKEN" ]] || { echo "::error::Add HF_TOKEN as a repository secret."; exit 1; }
-          [[ "$HF_REPO_ID" == */* ]] || { echo "::error::Repository ID must use owner/repository format."; exit 1; }
-          [[ -n "$HF_BRANCH" ]] || { echo "::error::Branch cannot be empty."; exit 1; }
+          [[ "$CONFIRM_RIGHTS" == "true" ]] || {
+            echo "::error::Permission confirmation is required."
+            exit 1
+          }
+
+          [[ -f huggingface.py ]] || {
+            echo "::error::huggingface.py is missing."
+            exit 1
+          }
+
+          [[ -s links.txt ]] || {
+            echo "::error::links.txt is missing or empty."
+            exit 1
+          }
+
+          [[ -n "$HF_TOKEN" ]] || {
+            echo "::error::Add HF_TOKEN as a repository secret."
+            exit 1
+          }
+
+          [[ "$INPUT_REPO_ID" == */* ]] || {
+            echo "::error::Repository ID must use owner/repository format."
+            exit 1
+          }
+
+          [[ -n "$INPUT_BRANCH" ]] || {
+            echo "::error::Branch cannot be empty."
+            exit 1
+          }
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install runtime
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq p7zip-full
-          sudo apt-get install -y -qq unrar-free || true
-          python -m pip install --disable-pip-version-check --no-cache-dir -q \
+
+          sudo apt-get install \
+            -y \
+            -qq \
+            p7zip-full \
+            unrar-free \
+            >/dev/null
+
+          python -m pip install \
+            --disable-pip-version-check \
+            --no-cache-dir \
+            -q \
             "huggingface_hub>=1.0,<2" \
             "requests>=2.32,<3" \
             "rarfile>=4,<5"
 
+          curl \
+            -fsSL \
+            --retry 5 \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+            -o /tmp/cloudflared
+
+          sudo install \
+            -m 0755 \
+            /tmp/cloudflared \
+            /usr/local/bin/cloudflared
+
       - name: Download and upload
-        run: python huggingface.py
+        run: |
+          python huggingface.py \
+            --repo-id "${{ inputs.repo_id }}" \
+            --path-in-repo "${{ inputs.path_in_repo }}" \
+            --branch "${{ inputs.branch }}" \
+            --repo-type "${{ inputs.repo_type }}" \
+            --download-workers "${{ inputs.download_workers }}"
 
       - name: Upload summary
         if: always()

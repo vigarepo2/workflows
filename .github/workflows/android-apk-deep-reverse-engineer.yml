@@ -1,0 +1,325 @@
+name: Android APK Deep Reverse Engineer
+
+on:
+  workflow_dispatch:
+    inputs:
+      apk_url:
+        description: Direct APK download URL
+        required: true
+        type: string
+        default: 'https://gsf-fl.softonic.com/3ad/50f/3f9a9650b296690e54e8eb4ee13cd040b4/in.gov.ecourts.eCourtsServices_4.0.5.apk?Expires=1788266188&Signature=61134b8acbe6c5661d522867ec0cd74be15d9f30&url=https://ecourts-services.en.softonic.com/android&Filename=in.gov.ecourts.eCourtsServices_4.0.5.apk'
+      app_name:
+        description: Output name
+        required: true
+        type: string
+        default: ecourts-4.0.5
+      commit_results:
+        description: Commit compact readable results to main
+        required: true
+        type: boolean
+        default: true
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-apk-deep-reverse-engineer.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-deep-re-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  reverse-engineer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      APK_URL: ${{ inputs.apk_url || 'https://gsf-fl.softonic.com/3ad/50f/3f9a9650b296690e54e8eb4ee13cd040b4/in.gov.ecourts.eCourtsServices_4.0.5.apk?Expires=1788266188&Signature=61134b8acbe6c5661d522867ec0cd74be15d9f30&url=https://ecourts-services.en.softonic.com/android&Filename=in.gov.ecourts.eCourtsServices_4.0.5.apk' }}
+      APP_NAME: ${{ inputs.app_name || 'ecourts-4.0.5' }}
+      APK_FILE: app.apk
+      OUTPUT_DIR: reverse-engineered/ecourts-4.0.5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install base tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang curl unzip zip jq file ca-certificates git ripgrep
+          rustup update stable
+          rustup default stable
+          python -m pip install --upgrade pip pipx
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Download and validate APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location \
+            --retry 5 --retry-delay 3 --retry-all-errors \
+            --connect-timeout 30 --max-time 900 \
+            -A 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/151 Mobile Safari/537.36' \
+            "$APK_URL" -o "$APK_FILE"
+          test -s "$APK_FILE"
+          file "$APK_FILE"
+          unzip -tq "$APK_FILE" >/dev/null
+          sha256sum "$APK_FILE"
+
+      - name: Install latest reverse-engineering toolchain
+        id: tools
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/re-tools"
+
+          # Primary modern APK + Hermes/DEX analyzer/decompiler.
+          cargo install --locked droidsaw
+          droidsaw --version | tee "$RUNNER_TEMP/re-tools/droidsaw-version.txt"
+
+          # Hermes-specific fallback from current upstream main, not an old pinned release.
+          python -m pip install 'git+https://github.com/P1sec/hermes-dec.git@main'
+          hbc-decompiler -V | tee "$RUNNER_TEMP/re-tools/hermes-dec-version.txt" || true
+
+          # Latest stable JADX release from upstream GitHub API.
+          JADX_JSON=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/skylot/jadx/releases/latest)
+          JADX_TAG=$(jq -r '.tag_name' <<<"$JADX_JSON")
+          JADX_URL=$(jq -r '.assets[] | select(.name | test("^jadx-[0-9].*\\.zip$")) | .browser_download_url' <<<"$JADX_JSON" | head -n1)
+          test -n "$JADX_URL" && test "$JADX_URL" != null
+          curl -fsSL --retry 4 "$JADX_URL" -o "$RUNNER_TEMP/re-tools/jadx.zip"
+          unzip -q "$RUNNER_TEMP/re-tools/jadx.zip" -d "$RUNNER_TEMP/re-tools/jadx"
+          chmod +x "$RUNNER_TEMP/re-tools/jadx/bin/jadx"
+
+          # Latest stable Apktool release from upstream GitHub API.
+          APKTOOL_JSON=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/iBotPeaches/Apktool/releases/latest)
+          APKTOOL_TAG=$(jq -r '.tag_name' <<<"$APKTOOL_JSON")
+          APKTOOL_URL=$(jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' <<<"$APKTOOL_JSON" | head -n1)
+          test -n "$APKTOOL_URL" && test "$APKTOOL_URL" != null
+          curl -fsSL --retry 4 "$APKTOOL_URL" -o "$RUNNER_TEMP/re-tools/apktool.jar"
+
+          echo "JADX_BIN=$RUNNER_TEMP/re-tools/jadx/bin/jadx" >> "$GITHUB_ENV"
+          echo "APKTOOL_JAR=$RUNNER_TEMP/re-tools/apktool.jar" >> "$GITHUB_ENV"
+          echo "jadx_tag=$JADX_TAG" >> "$GITHUB_OUTPUT"
+          echo "apktool_tag=$APKTOOL_TAG" >> "$GITHUB_OUTPUT"
+          "$RUNNER_TEMP/re-tools/jadx/bin/jadx" --version
+          java -jar "$RUNNER_TEMP/re-tools/apktool.jar" --version
+
+      - name: Prepare workspaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$OUTPUT_DIR" "$RUNNER_TEMP/ecourts-re"
+          mkdir -p "$OUTPUT_DIR/readable/hermes" "$OUTPUT_DIR/readable/native-app" "$OUTPUT_DIR/reports"
+          mkdir -p "$RUNNER_TEMP/ecourts-re"/{jadx,apktool,hermes-dec,bundle}
+
+      - name: Analyze complete APK with droidsaw
+        shell: bash
+        run: |
+          set -euo pipefail
+          R="$OUTPUT_DIR/reports"
+          droidsaw info "$APK_FILE" > "$R/DROIDSAW_INFO.json"
+          droidsaw manifest "$APK_FILE" > "$R/DROIDSAW_MANIFEST.json"
+          droidsaw signing "$APK_FILE" > "$R/DROIDSAW_SIGNING.json" || true
+          droidsaw audit "$APK_FILE" --mode=basic > "$R/DROIDSAW_AUDIT.json" || true
+          droidsaw strings "$APK_FILE" --layer hbc \
+            --search 'https?://|services_|base.?url|endpoint|CNR|FIR|captcha|encrypt|decrypt|AES|Authorization|Bearer|token|case|court|order' \
+            > "$R/HERMES_STRINGS.json" || true
+          droidsaw xrefs "$APK_FILE" \
+            --search 'https?://|services_|base.?url|CNR|FIR|captcha|encrypt|decrypt|AES|Authorization|Bearer' \
+            > "$R/HERMES_XREFS.json" || true
+
+      - name: Decompile Hermes application logic with droidsaw
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          droidsaw decompile "$APK_FILE" --all --js \
+            > "$OUTPUT_DIR/readable/hermes/app.js" \
+            2> "$OUTPUT_DIR/reports/droidsaw-hermes.log"
+          RC=$?
+          set -e
+          echo "$RC" > "$OUTPUT_DIR/reports/droidsaw-hermes-exit-code.txt"
+          if [[ ! -s "$OUTPUT_DIR/readable/hermes/app.js" ]]; then
+            echo 'droidsaw did not emit concatenated Hermes JS; fallback remains enabled.' >&2
+          fi
+
+      - name: Extract Hermes bundle and run hermes-dec fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE="$RUNNER_TEMP/ecourts-re/bundle/index.android.bundle"
+          if unzip -Z1 "$APK_FILE" | grep -qx 'assets/index.android.bundle'; then
+            unzip -p "$APK_FILE" assets/index.android.bundle > "$BUNDLE"
+            file "$BUNDLE" | tee "$OUTPUT_DIR/reports/HERMES_BUNDLE_TYPE.txt"
+            sha256sum "$BUNDLE" > "$OUTPUT_DIR/reports/HERMES_BUNDLE_SHA256.txt"
+            set +e
+            hbc-file-parser "$BUNDLE" > "$OUTPUT_DIR/reports/HERMES_HEADER.txt" 2> "$OUTPUT_DIR/reports/hermes-dec-parser.log"
+            hbc-decompiler "$BUNDLE" "$OUTPUT_DIR/readable/hermes/hermes-dec.js" 2> "$OUTPUT_DIR/reports/hermes-dec.log"
+            hbc-disassembler "$BUNDLE" "$RUNNER_TEMP/ecourts-re/hermes-dec/app.hasm" 2> "$OUTPUT_DIR/reports/hermes-dec-disassembler.log"
+            set -e
+          else
+            echo 'No assets/index.android.bundle found.' > "$OUTPUT_DIR/reports/HERMES_BUNDLE_TYPE.txt"
+          fi
+
+      - name: Decompile native Android layer with latest JADX
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          "$JADX_BIN" --deobf --show-bad-code -j 4 \
+            -d "$RUNNER_TEMP/ecourts-re/jadx" "$APK_FILE" \
+            2>&1 | tee "$OUTPUT_DIR/reports/jadx.log"
+          RC=${PIPESTATUS[0]}
+          set -e
+          echo "$RC" > "$OUTPUT_DIR/reports/jadx-exit-code.txt"
+
+          APP_SRC="$RUNNER_TEMP/ecourts-re/jadx/sources/in/gov/ecourts/eCourtsServices"
+          if [[ -d "$APP_SRC" ]]; then
+            cp -a "$APP_SRC"/. "$OUTPUT_DIR/readable/native-app/"
+          fi
+
+      - name: Decode exact resources and smali with latest Apktool
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          java -Xmx4g -jar "$APKTOOL_JAR" d --force \
+            --output "$RUNNER_TEMP/ecourts-re/apktool" "$APK_FILE" \
+            2>&1 | tee "$OUTPUT_DIR/reports/apktool.log"
+          RC=${PIPESTATUS[0]}
+          set -e
+          echo "$RC" > "$OUTPUT_DIR/reports/apktool-exit-code.txt"
+          if [[ -f "$RUNNER_TEMP/ecourts-re/apktool/AndroidManifest.xml" ]]; then
+            cp "$RUNNER_TEMP/ecourts-re/apktool/AndroidManifest.xml" "$OUTPUT_DIR/reports/AndroidManifest.decoded.xml"
+          fi
+          if [[ -f "$RUNNER_TEMP/ecourts-re/apktool/res/xml/network_security_config.xml" ]]; then
+            cp "$RUNNER_TEMP/ecourts-re/apktool/res/xml/network_security_config.xml" "$OUTPUT_DIR/reports/network_security_config.xml"
+          fi
+
+      - name: Build API-focused readable reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - "$OUTPUT_DIR" "$APK_FILE" <<'PY'
+          from pathlib import Path
+          import hashlib, re, sys
+
+          root = Path(sys.argv[1])
+          apk = Path(sys.argv[2])
+          report = root / 'reports'
+          js_files = [p for p in (root/'readable'/'hermes').glob('*.js') if p.is_file()]
+          native = root/'readable'/'native-app'
+
+          url_rx = re.compile(r'https?://[^\s\"\'<>\\)\]]+', re.I)
+          domain_rx = re.compile(r'(?<![\w.-])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:gov\.in|nic\.in|com|org|net|io|app|dev|in)(?::\d+)?', re.I)
+          key_rx = re.compile(r'(?i)(services[_-]?[A-Z]*|base.?url|endpoint|axios|fetch\s*\(|CNR|FIR|captcha|encrypt|decrypt|AES|Authorization|Bearer|token|case.?history|court|order|judgment|cause.?list)')
+
+          urls, domains, hits = set(), set(), []
+          for p in js_files:
+              text = p.read_text('utf-8', errors='ignore')
+              urls.update(url_rx.findall(text))
+              domains.update(domain_rx.findall(text))
+              for n, line in enumerate(text.splitlines(), 1):
+                  if key_rx.search(line):
+                      hits.append(f'{p.relative_to(root)}:{n}: {line.strip()[:1800]}')
+
+          if native.exists():
+              for p in native.rglob('*'):
+                  if not p.is_file() or p.suffix.lower() not in {'.java','.kt','.xml','.json'}:
+                      continue
+                  try:
+                      text = p.read_text('utf-8', errors='ignore')
+                  except OSError:
+                      continue
+                  urls.update(url_rx.findall(text))
+                  domains.update(domain_rx.findall(text))
+                  for n, line in enumerate(text.splitlines(), 1):
+                      if key_rx.search(line):
+                          hits.append(f'{p.relative_to(root)}:{n}: {line.strip()[:1800]}')
+
+          (report/'URLS.txt').write_text('\n'.join(sorted(urls))+'\n', encoding='utf-8')
+          (report/'DOMAINS.txt').write_text('\n'.join(sorted(domains))+'\n', encoding='utf-8')
+          (report/'API_AND_CRYPTO_HITS.txt').write_text('\n'.join(hits[:100000])+'\n', encoding='utf-8')
+
+          sha = hashlib.sha256(apk.read_bytes()).hexdigest()
+          js_size = sum(p.stat().st_size for p in js_files)
+          native_count = sum(1 for p in native.rglob('*') if p.is_file()) if native.exists() else 0
+          summary = f'''# {root.name} deep reverse engineering\n\nThis output is intentionally focused on application logic rather than thousands of dependency files.\n\n## Readable code\n\n- `readable/hermes/app.js` — Hermes React Native application logic reconstructed by droidsaw.\n- `readable/hermes/hermes-dec.js` — independent hermes-dec pseudo-code fallback when supported by the bundle version.\n- `readable/native-app/` — only the app's own Java/Kotlin-like native package from JADX.\n\n## API investigation\n\n- `reports/HERMES_STRINGS.json` — interesting strings extracted directly from Hermes bytecode.\n- `reports/HERMES_XREFS.json` — functions referencing API/auth/encryption/court-related strings.\n- `reports/API_AND_CRYPTO_HITS.txt` — readable source locations for likely endpoint, request, crypto and case-search logic.\n- `reports/URLS.txt` and `reports/DOMAINS.txt` — URLs/domains found in app-specific reconstructed logic.\n- `reports/DROIDSAW_AUDIT.json` — cross-layer static analysis.\n\n## Tooling\n\n- Primary: droidsaw (APK + DEX + Hermes v40-v100 analysis/decompilation).\n- Hermes fallback: current P1sec/hermes-dec main.\n- Native fallback: latest stable JADX + latest stable Apktool.\n\n## Counts\n\n- Reconstructed Hermes JS bytes: {js_size}\n- App-native readable files: {native_count}\n- App-specific URLs: {len(urls)}\n- App-specific domains: {len(domains)}\n- APK SHA-256: `{sha}`\n\n## Note\n\nDecompilation reconstructs readable source from bytecode; it is not the developer's original source tree. For ambiguous native methods, use the full Apktool smali artifact.\n'''
+          (root/'README.md').write_text(summary, encoding='utf-8')
+          PY
+
+          {
+            echo '# Tool versions'
+            echo
+            echo "- droidsaw: \`$(droidsaw --version 2>/dev/null || true)\`"
+            echo "- hermes-dec: \`$(hbc-decompiler -V 2>/dev/null || true)\`"
+            echo "- JADX: \`${{ steps.tools.outputs.jadx_tag }}\`"
+            echo "- Apktool: \`${{ steps.tools.outputs.apktool_tag }}\`"
+            echo "- Run: \`${{ github.run_id }}\`"
+            echo "- Generated UTC: \`$(date -u +'%Y-%m-%dT%H:%M:%SZ')\`"
+          } > "$OUTPUT_DIR/reports/TOOL_VERSIONS.md"
+
+          echo 'Top API/crypto hits:'
+          sed -n '1,100p' "$OUTPUT_DIR/reports/API_AND_CRYPTO_HITS.txt" || true
+
+      - name: Commit compact readable results to main
+        if: ${{ github.event_name == 'push' || inputs.commit_results }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$OUTPUT_DIR"
+          if git diff --cached --quiet; then
+            echo 'No analysis changes to commit.'
+            exit 0
+          fi
+          git commit -m "Deep reverse engineer $APP_NAME with Hermes support"
+          git push origin HEAD:main
+
+      - name: Build complete downloadable artifact
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/artifact"
+          cp -a "$OUTPUT_DIR" "$RUNNER_TEMP/artifact/compact-results" 2>/dev/null || true
+          cp -a "$RUNNER_TEMP/ecourts-re/jadx" "$RUNNER_TEMP/artifact/full-jadx" 2>/dev/null || true
+          cp -a "$RUNNER_TEMP/ecourts-re/apktool" "$RUNNER_TEMP/artifact/full-apktool" 2>/dev/null || true
+          cp -a "$RUNNER_TEMP/ecourts-re/hermes-dec" "$RUNNER_TEMP/artifact/hermes-disassembly" 2>/dev/null || true
+          cp "$APK_FILE" "$RUNNER_TEMP/artifact/$APP_NAME.apk" 2>/dev/null || true
+
+      - name: Upload complete reverse-engineering artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ env.APP_NAME }}-deep-reverse-engineered
+          path: ${{ runner.temp }}/artifact
+          if-no-files-found: warn
+          compression-level: 6
+          retention-days: 30

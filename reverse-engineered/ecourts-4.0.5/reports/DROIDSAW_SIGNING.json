@@ -1,0 +1,127 @@
+{
+  "signing": {
+    "v1_present": false,
+    "v2_present": true,
+    "v3_present": false,
+    "v4_present": false,
+    "v1_subject": null,
+    "v1_algorithm": null,
+    "v1_key_size_bits": null,
+    "v1_sha256_fingerprint": null,
+    "v1_not_before": null,
+    "v1_not_after": null,
+    "finding_count": 4,
+    "findings": [
+      {
+        "id": "PLAY_FROSTING_PRESENT",
+        "layer": "Apk",
+        "source": "Manifest",
+        "severity": "Info",
+        "gauge_class": "Semantic",
+        "confidence": "Unverified",
+        "dismiss_reason": null,
+        "cwe": null,
+        "detail": "Google Play Frosting (0x2146444e) signed attestation present — APK was distributed via the Play Store",
+        "extra": null,
+        "func_id": null,
+        "provenance": null,
+        "file_path": null,
+        "byte_offset": null,
+        "observed": null,
+        "expected": null,
+        "aab_module": null
+      },
+      {
+        "id": "SIGNING_BLOCK_INFO",
+        "layer": "Apk",
+        "source": "Manifest",
+        "severity": "Info",
+        "gauge_class": "Cryptographic",
+        "confidence": "Unverified",
+        "dismiss_reason": null,
+        "cwe": null,
+        "detail": "v2 signer: RSA-PKCS1-v1_5-SHA2-256 (cert: 7E:18:D6:73:3C:C8:38:A1:75:99:92:FB:A6:79:B7:19:EE:82:38:4A:6F:D5:E8:F7:E1:F6:D0:56:15:B1:FD:65)",
+        "extra": null,
+        "func_id": null,
+        "provenance": null,
+        "file_path": null,
+        "byte_offset": null,
+        "observed": null,
+        "expected": null,
+        "aab_module": null
+      },
+      {
+        "id": "V2_DIGEST_VERIFIED",
+        "layer": "Apk",
+        "source": "Manifest",
+        "severity": "Info",
+        "gauge_class": "Cryptographic",
+        "confidence": "Unverified",
+        "dismiss_reason": null,
+        "cwe": null,
+        "detail": "v2 signing block digest verified against APK contents",
+        "extra": null,
+        "func_id": null,
+        "provenance": null,
+        "file_path": null,
+        "byte_offset": null,
+        "observed": null,
+        "expected": null,
+        "aab_module": null
+      },
+      {
+        "id": "SIGNATURE_VERIFIED",
+        "layer": "Apk",
+        "source": "Manifest",
+        "severity": "Info",
+        "gauge_class": "Cryptographic",
+        "confidence": "Unverified",
+        "dismiss_reason": null,
+        "cwe": null,
+        "detail": "v2 signer signature verified with embedded public key (RSA-PKCS1-v1_5-SHA2-256)",
+        "extra": null,
+        "func_id": null,
+        "provenance": null,
+        "file_path": null,
+        "byte_offset": null,
+        "observed": null,
+        "expected": null,
+        "aab_module": null
+      }
+    ],
+    "signers": [
+      {
+        "scheme": "v2",
+        "cert_sha256": "7E:18:D6:73:3C:C8:38:A1:75:99:92:FB:A6:79:B7:19:EE:82:38:4A:6F:D5:E8:F7:E1:F6:D0:56:15:B1:FD:65",
+        "public_key_algorithm": "RSA",
+        "public_key_size_bits": 2048,
+        "public_key_rsa_exponent": "010001",
+        "public_key_ec_curve": null,
+        "public_key_ec_point": null,
+        "signature_results": [
+          {
+            "algorithm": 259,
+            "algorithm_name": "RSA-PKCS1-v1_5-SHA2-256",
+            "outcome": {
+              "status": "valid"
+            }
+          }
+        ],
+        "signed_data_outcome": {
+          "status": "valid"
+        }
+      }
+    ]
+  },
+  "_meta": {
+    "count": 1,
+    "truncated": false,
+    "hint": "cert details plus v2/v3/v4 presence; pair with `droidsaw manifest` for permission context",
+    "related": [
+      "manifest",
+      "audit",
+      "apk-info"
+    ],
+    "tool_version": "2.0.0"
+  }
+}

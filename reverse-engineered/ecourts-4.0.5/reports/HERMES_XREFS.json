@@ -1,0 +1,3266 @@
+{
+  "xrefs": [
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "function valueUnpacker_valueUnpackerTs1(objectToUnpack,category,remoteFunctionName){let workletsCache=global.__workletsCache;let handleCache=global.__handleCache;if(workletsCache===undefined){workletsCache=global.__workletsCache=new Map();handleCache=global.__handleCache=new WeakMap();}const workletHash=objectToUnpack.__workletHash;if(workletHash!==undefined){let workletFun=workletsCache.get(workletHash);if(workletFun===undefined){const initData=objectToUnpack.__initData;if(global.evalWithSourceMap){workletFun=global.evalWithSourceMap('('+initData.code+'\\n)',initData.location,initData.sourceMap);}else if(global.evalWithSourceUrl){workletFun=global.evalWithSourceUrl('('+initData.code+'\\n)',\"worklet_\"+workletHash);}else{workletFun=eval('('+initData.code+'\\n)');}workletsCache.set(workletHash,workletFun);}const functionInstance=workletFun.bind(objectToUnpack);objectToUnpack._recur=functionInstance;return functionInstance;}else if(objectToUnpack.__init!==undefined){let value=handleCache.get(objectToUnpack);if(value===undefined){value=objectToUnpack.__init();handleCache.set(objectToUnpack,value);}return value;}else if(category==='RemoteFunction'){const fun=function(){const label=remoteFunctionName?\"function `\"+remoteFunctionName+\"`\":'anonymous function';throw new Error(\"[Reanimated] Tried to synchronously call a non-worklet \"+label+\" on the UI thread.\\nSee https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#tried-to-synchronously-call-a-non-worklet-function-on-the-ui-thread for more details.\");};fun.__remoteFunction=objectToUnpack;return fun;}else{throw new Error(\"[Reanimated] Data type in category \\\"\"+category+\"\\\" not recognized by value unpacker: \\\"\"+_toString(objectToUnpack)+\"\\\".\");}}",
+      "functions": [
+        "(#5793)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Function components cannot have string refs. We recommend using useRef() instead. Learn more about using refs safely here: https://react.dev/link/strict-mode-string-ref",
+      "functions": [
+        "convertStringRefToCallbackRef(#581)",
+        "convertStringRefToCallbackRef(#2541)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "\n\nSee https://reactnavigation.org/docs/bottom-tab-navigator#options for more details.",
+      "functions": [
+        "BottomTabNavigator(#23657)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-width",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "\n\nSee https://reactnavigation.org/docs/configuring-links for more details on how to specify a linking configuration.",
+      "functions": [
+        "validatePathConfig(#8766)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Another navigator is already registered for this container. You likely have multiple navigators under a single \"NavigationContainer\" or \"Screen\". Make sure each navigator is under a separate \"Screen\" container. See https://reactnavigation.org/docs/nesting-navigators for a guide on nesting.",
+      "functions": [
+        "(#8467)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": ") but no owner was set. This could happen for one of the following reasons:\n1. You may be adding a ref to a function component\n2. You may be adding a ref to a component that was not created inside a component's render method\n3. You have multiple copies of React loaded\nSee https://react.dev/link/refs-must-have-owner for more information.",
+      "functions": [
+        "convertStringRefToCallbackRef(#581)",
+        "convertStringRefToCallbackRef(#2541)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md",
+      "functions": [
+        "shouldUseNativeDriver(#3130)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "use moment.updateLocale(localeName, config) to change an existing locale. moment.defineLocale(localeName, config) should only be used for creating a new locale See http://momentjs.com/guides/#/warnings/define-locale/ for more info.",
+      "functions": [
+        "defineLocale(#20245)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": " on the UI thread.\nSee https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#tried-to-synchronously-call-a-non-worklet-function-on-the-ui-thread for more details.",
+      "functions": [
+        "fun(#5797)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": " For iOS web, you will also have to also grant permission in the browser: https://dev.to/li/how-to-requestpermission-for-devicemotion-and-deviceorientation-events-in-ios-13-46g2.",
+      "functions": [
+        "registerSensor(#5867)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://app.ecourts.gov.in/services_DC_4.0/",
+      "functions": [
+        "(#10774)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://app.ecourts.gov.in/services_DC_4.0/preTrialOrder_pdf.php?params=",
+      "functions": [
+        "(#16103)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "PushNotificationIOS has been extracted from react-native core and will be removed in a future release. It can now be installed and imported from '@react-native-community/push-notification-ios' instead of 'react-native'. See https://github.com/react-native-push-notification/ios",
+      "functions": [
+        "get PushNotificationIOS(#139)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "The navigation state parsed from the URL contains routes not present in the root navigator. This usually means that the linking configuration doesn't match the navigation structure. See https://reactnavigation.org/docs/configuring-links for more details on how to specify a linking configuration.",
+      "functions": [
+        "listener(#9092)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "\n\nSee https://reactnavigation.org/docs/drawer-navigator#options for more details.",
+      "functions": [
+        "DrawerNavigator(#23829)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "KeystoreAESGCM",
+      "functions": [
+        "(#11456)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "KeystoreAESGCM_NoAuth",
+      "functions": [
+        "(#11456)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "' in props is deprecated. Move it to 'screenOptions' instead.\n\nSee https://reactnavigation.org/docs/material-top-tab-navigator#",
+      "functions": [
+        "(#17934)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "\n\nSee https://reactnavigation.org/docs/material-top-tab-navigator#options for more details.",
+      "functions": [
+        "MaterialTopTabNavigator(#17932)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "You passed a second argument to 'useFocusEffect', but it only accepts one argument. If you want to pass a dependency array, you can use 'React.useCallback':\n\nuseFocusEffect(\n  React.useCallback(() => {\n    // Your code here\n  }, [depA, depB])\n);\n\nSee usage guide: https://reactnavigation.org/docs/use-focus-effect",
+      "functions": [
+        "useFocusEffect(#8836)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-block-start",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "<svg xmlns=\"http://www.w3.org/2000/svg\" ",
+      "functions": [
+        "render(#22215)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "\"' in 'screenOptions' instead.\n\nSee https://reactnavigation.org/docs/stack-navigator#presentation for more details.",
+      "functions": [
+        "StackNavigator(#14899)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://app.ecourts.gov.in/services_HC_4.0/",
+      "functions": [
+        "?anon_0_(#10790)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/-ms-content-zoom-limit",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://app.ecourts.gov.in/App/appprivacypolicy.html",
+      "functions": [
+        "onPress(#8336)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "; visit https://redux-toolkit.js.org/Errors?code=",
+      "functions": [
+        "formatProdErrorMessage(#10068)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "; visit https://redux.js.org/Errors?code=",
+      "functions": [
+        "formatProdErrorMessage(#10471)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": ". Full error at: https://bit.ly/3cXEKWf",
+      "functions": [
+        "die(#10238)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Search by CNR number",
+      "functions": [
+        "CnrSearch(#10634)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "CNR number is required",
+      "functions": [
+        "validateCnr(#10645)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info.",
+      "functions": [
+        "(#20305)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "KeystoreAESCBC",
+      "functions": [
+        "(#11456)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Bearer ",
+      "functions": [
+        "?anon_0_(#10790)",
+        "?anon_0_(#13472)",
+        "Fetcher(#14253)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Bottom Tab Navigator: 'lazy' in props is deprecated. Move it to 'screenOptions' instead.\n\nSee https://reactnavigation.org/docs/bottom-tab-navigator/#lazy for more details.",
+      "functions": [
+        "BottomTabNavigator(#23657)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Invalid CNR Number",
+      "functions": [
+        "validateCnr(#10645)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "CNR",
+      "functions": [
+        "HomeScreen(#10553)",
+        "CnrSearch(#10634)",
+        "?anon_0_(#10730)",
+        "(#20670)",
+        "(#20672)",
+        "onPress(#20689)",
+        "onPress(#20697)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "CNR Number",
+      "functions": [
+        "createCaveatHistoryTab(#20681)",
+        "createFilingHistoryTab(#20682)",
+        "createHistoryTabs(#20687)",
+        "ViewBusinessScreen(#23621)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Calling PropTypes validators directly is not supported by the `prop-types` package. Use PropTypes.checkPropTypes() to call them. Read more at http://fb.me/use-check-prop-types",
+      "functions": [
+        "shim(#9205)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Stack Navigator: 'headerMode' is moved to 'options'. Moved it to 'screenOptions' to keep current behavior.\n\nSee https://reactnavigation.org/docs/stack-navigator/#headermode for more details.",
+      "functions": [
+        "StackNavigator(#14899)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://apps.apple.com/in/app/ecourts-services/id1260905816",
+      "functions": [
+        "openAppStore(#10627)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "value provided is not in a recognized RFC2822 or ISO format. moment construction falls back to js Date(), which is not reliable across all browsers and versions. Non RFC2822/ISO date formats are discouraged. Please refer to http://momentjs.com/guides/#/warnings/js-date/ for more info.",
+      "functions": [
+        "(#20120)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Clipboard has been extracted from react-native core and will be removed in a future release. It can now be installed and imported from '@react-native-clipboard/clipboard' instead of 'react-native'. See https://github.com/react-native-clipboard/clipboard",
+      "functions": [
+        "get Clipboard(#120)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Couldn't find a navigation context. Have you wrapped your app with 'NavigationContainer'? See https://reactnavigation.org/docs/getting-started for setup instructions.",
+      "functions": [
+        "get getKey(#8493)",
+        "get setKey(#8494)",
+        "get getState(#8495)",
+        "get setState(#8496)",
+        "get getIsInitial(#8497)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Creating a navigator doesn't take an argument. Maybe you are trying to use React Navigation 4 API? See https://reactnavigation.org/docs/hello-react-navigation for the latest API and guides.",
+      "functions": [
+        "(#8669)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED",
+      "functions": [
+        "(#9207)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Drawer Navigator: 'lazy' in props is deprecated. Move it to 'screenOptions' instead.\n\nSee https://reactnavigation.org/docs/drawer-navigator/#lazy for more details.",
+      "functions": [
+        "DrawerNavigator(#23829)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Drawer Navigator: 'openByDefault' is deprecated. Use 'defaultStatus' and set it to 'open' or 'closed' instead.\n\nSee https://reactnavigation.org/docs/drawer-navigator/#defaultstatus for more details.",
+      "functions": [
+        "DrawerNavigator(#23829)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Enter FIR number",
+      "functions": [
+        "SearchByFirNumber(#17346)",
+        "PreTrial(#17592)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "FIR number must contain only numbers",
+      "functions": [
+        "validateForm(#17607)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Enter non zero FIR number",
+      "functions": [
+        "onSubmit(#17365)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "FIR number should not exceed 99 characters",
+      "functions": [
+        "onSubmit(#17365)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "FIR Details",
+      "functions": [
+        "createFilingHistoryTab(#20682)",
+        "createHistoryTabs(#20687)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Search by FIR Number",
+      "functions": [
+        "(#10734)",
+        "useLabels(#10735)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "FIR Number",
+      "functions": [
+        "CaseComponent(#16094)",
+        "CaseStatusScreen(#17627)",
+        "createFilingHistoryTab(#20682)",
+        "createHistoryTabs(#20687)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Invalid characters in FIR number",
+      "functions": [
+        "onSubmit(#17365)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:\n1. You might have mismatching versions of React and the renderer (such as React DOM)\n2. You might be breaking the Rules of Hooks\n3. You might have more than one copy of React in the same app\nSee https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.",
+      "functions": [
+        "throwInvalidHookError(#614)",
+        "throwInvalidHookError(#2574)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "It looks like you might be using shared value's .value inside reanimated inline style. If you want a component to update when shared value changes you should use the shared value directly instead of its current state represented by `.value`. See documentation here: https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/glossary/#animations-in-inline-styling",
+      "functions": [
+        "getUseOfValueInStyleWarning(#7960)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://youtube.com/@ecommittee?si=vvNa235ajLkZIEiJ",
+      "functions": [
+        "navigateToFacebook(#8300)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Looks like you forgot to wrap your root component with `Provider` component from `react-native-paper`.\n\nPlease read our getting-started guide and make sure you've followed all the required steps.\n\nhttps://callstack.github.io/react-native-paper/getting-started.html",
+      "functions": [
+        "checkManager(#16881)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Maximum iteration number exceeded (please fill an issue on https://github.com/csstree/csstree/issues)",
+      "functions": [
+        "(#22695)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-right",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Native part of Reanimated doesn't seem to be initialized (Worklets).\nSee https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#native-part-of-reanimated-doesnt-seem-to-be-initialized for more details.",
+      "functions": [
+        "NativeWorklets(#5791)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Native part of Reanimated doesn't seem to be initialized.\nSee https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#native-part-of-reanimated-doesnt-seem-to-be-initialized for more details.",
+      "functions": [
+        "NativeReanimatedModule(#5887)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Please enter 16 digit CNR Number",
+      "functions": [
+        "validateCnr(#10645)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "ProgressBarAndroid has been extracted from react-native core and will be removed in a future release. It can now be installed and imported from '@react-native-community/progress-bar-android' instead of 'react-native'. See https://github.com/react-native-progress-view/progress-bar-android",
+      "functions": [
+        "get ProgressBarAndroid(#96)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://play.google.com/store/apps/details?id=in.gov.ecourts.eCourtsServices",
+      "functions": [
+        "openAppStore(#10627)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Select FIR Type",
+      "functions": [
+        "PreTrial(#17592)",
+        "?anon_0_(#17613)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://judgments.ecourts.gov.in/pdfsearch/index.php",
+      "functions": [
+        "CustomDrawerContent(#8315)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Stack Navigator: 'headerMode=\"none\"' is deprecated. Use 'headerShown: false' in 'screenOptions' instead.\n\nSee https://reactnavigation.org/docs/stack-navigator/#headershown for more details.",
+      "functions": [
+        "StackNavigator(#14899)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Stack Navigator: 'keyboardHandlingEnabled' is moved to 'options'. Moved it to 'screenOptions' to keep current behavior.\n\nSee https://reactnavigation.org/docs/stack-navigator/#keyboardhandlingenabled for more details.",
+      "functions": [
+        "StackNavigator(#14899)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/gap",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "The 'navigation' object hasn't been initialized yet. This might happen if you don't have a navigator mounted, or if the navigator hasn't finished mounting. See https://reactnavigation.org/docs/navigating-without-navigation-prop#handling-initialization for more details.",
+      "functions": [
+        "(#8553)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "To remove this warning, try installing 'react-native-vector-icons' or use another method to specify icon: https://callstack.github.io/react-native-paper/icons.html.",
+      "functions": [
+        "MaterialCommunityIcons(#16430)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Unsupported core-js use. Try https://npms.io/search?q=ponyfill.",
+      "functions": [
+        "isNative(#12994)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-style",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "You need to specify name or key when calling navigate with an object as the argument. See https://reactnavigation.org/docs/navigation-actions#navigate for usage.",
+      "functions": [
+        "navigate(#8579)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-image",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/text-emphasis",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-block-end",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/background",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-top",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://app.ecourts.gov.in/App/appdisclaimer.html",
+      "functions": [
+        "onPress(#8338)",
+        "onPress(#10630)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://www.googleapis.com/drive/v3/",
+      "functions": [
+        "customAxios_google_api(#13464)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/font",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/-webkit-text-stroke",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://docs.swmansion.com/react-native-reanimated/docs/debugging/logger-configuration",
+      "functions": [
+        "(#5696)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "http://10.0.2.2:3006/",
+      "functions": [
+        "(#9463)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/padding",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/mask",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/mask-border",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "http://localhost",
+      "functions": [
+        "(#9623)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "http://localhost:8097",
+      "functions": [
+        "(#8289)",
+        "(#8345)",
+        "(#10550)",
+        "(#17767)",
+        "(#20653)",
+        "(#23511)",
+        "(#23514)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://app.ecourts.gov.in/App/appcontactus.html",
+      "functions": [
+        "onPress(#8340)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/-moz-outline-radius",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/-webkit-border-before",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-bottom",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-color",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-inline-end",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-inline-start",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-left",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/border-radius",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/column-rule",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/columns",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/flex",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/grid",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/grid-template",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/margin",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/offset",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/outline",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://developer.mozilla.org/docs/Web/CSS/text-decoration",
+      "functions": [
+        "(#22801)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://ecommitteesci.gov.in/",
+      "functions": [
+        "CustomDrawerContent(#8315)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://ecourts.gov.in/ecourts_home/static/informationletter.php",
+      "functions": [
+        "CustomDrawerContent(#8315)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://filing.ecourts.gov.in/",
+      "functions": [
+        "CustomDrawerContent(#8315)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://indiacode.nic.in/",
+      "functions": [
+        "CustomDrawerContent(#8315)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://njdg.ecourts.gov.in/njdg_v3/",
+      "functions": [
+        "CustomDrawerContent(#8315)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://pay.ecourts.gov.in/epay/",
+      "functions": [
+        "CustomDrawerContent(#8315)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://services.ecourts.gov.in/App/apphelp.html",
+      "functions": [
+        "onPress(#8334)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "https://vcourts.gov.in/virtualcourt/",
+      "functions": [
+        "CustomDrawerContent(#8315)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "isDSTShifted is deprecated. See http://momentjs.com/guides/#/warnings/dst-shifted/ for more information",
+      "functions": [
+        "(#20120)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "moment().max is deprecated, use moment.min instead. http://momentjs.com/guides/#/warnings/min-max/",
+      "functions": [
+        "(#20120)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "moment().min is deprecated, use moment.max instead. http://momentjs.com/guides/#/warnings/min-max/",
+      "functions": [
+        "(#20120)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "moment().zone is deprecated, use moment().utcOffset instead. http://momentjs.com/guides/#/warnings/zone/",
+      "functions": [
+        "(#20120)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "refreshAuthorizationStatus",
+      "functions": [
+        "(#14469)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "@react-native-community/netinfo: NativeModule.RNCNetInfo is null. To fix this issue try these steps:\n\n• Run `react-native link @react-native-community/netinfo` in the project root.\n• Rebuild and re-run the app.\n• If you are using CocoaPods on iOS, run `pod install` in the `ios` directory and then rebuild and re-run the app. You may also need to re-open Xcode to get the new pods.\n• Check that the library was linked correctly when you used the link command by running through the manual installation instructions in the README.\n* If you are getting this error while unit testing you need to mock the native module. Follow the guide in the README.\n\nIf none of these fix the issue, please open an issue on the Github repository: https://github.com/react-native-community/react-native-netinfo",
+      "functions": [
+        "(#10677)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "[@RNC/AsyncStorage]: NativeModule: AsyncStorage is null.\n\nTo fix this issue try these steps:\n\n  • Uninstall, rebuild and restart the app.\n\n  • Run the packager with `--reset-cache` flag.\n\n  • If you are using CocoaPods on iOS, run `pod install` in the `ios` directory, then rebuild and re-run the app.\n\n  • Make sure your project's `package.json` depends on `@react-native-async-storage/async-storage`, even if you only depend on it indirectly through other dependencies. CLI only autolinks native modules found in your `package.json`.\n\n  • If this happens while testing with Jest, check out how to integrate AsyncStorage here: https://react-native-async-storage.github.io/async-storage/docs/advanced/jest\n\nIf none of these fix the issue, please open an issue on the GitHub repository: https://github.com/react-native-async-storage/async-storage/issues\n",
+      "functions": [
+        "(#9414)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "react-native-device-info: NativeModule.RNDeviceInfo is null. To fix this issue try these steps:\n  • For react-native <= 0.59: Run `react-native link react-native-device-info` in the project root.\n  • Rebuild and re-run the app.\n  • If you are using CocoaPods on iOS, run `pod install` in the `ios` directory and then rebuild and re-run the app. You may also need to re-open Xcode to get the new pods.\n  If none of these fix the issue, please open an issue on the Github repository: https://github.com/react-native-device-info/react-native-device-info",
+      "functions": [
+        "(#11323)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "react-native-permissions: NativeModule.RNPermissions is null. To fix this issue try these steps:\n  • If you are using CocoaPods on iOS, run `pod install` in the `ios` directory and then clean, rebuild and re-run the app. You may also need to re-open Xcode to get the new pods.\n  • If you are getting this error while unit testing you need to mock the native module. You can use this to get started: https://github.com/react-native-community/react-native-permissions/blob/master/mock.js\n  If none of these fix the issue, please open an issue on the Github repository: https://github.com/react-native-community/react-native-permissions",
+      "functions": [
+        "(#14537)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "isdistrictloading_FIR",
+      "functions": [
+        "(#11460)",
+        "(#11465)",
+        "(#11466)",
+        "(#11467)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "selected_district_name_FIR",
+      "functions": [
+        "(#11460)",
+        "(#11532)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "selected_district_val_FIR",
+      "functions": [
+        "(#11460)",
+        "(#11532)",
+        "SearchByFirNumber(#17346)",
+        "StateDistCaveatComponent(#17400)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "AES",
+      "functions": [
+        "?anon_0_(#10790)",
+        "(#10794)",
+        "(#11043)",
+        "(#11044)",
+        "encryptParams(#16200)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "AES_CBC",
+      "functions": [
+        "(#11456)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "resetStatesFIR",
+      "functions": [
+        "extraReducers(#11461)",
+        "(#11494)",
+        "(#17356)",
+        "?anon_0_(#17369)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "AFTER_FIRST_UNLOCK",
+      "functions": [
+        "(#11456)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY",
+      "functions": [
+        "(#11456)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "fetchFIRNumberDistrict",
+      "functions": [
+        "extraReducers(#11461)",
+        "(#11494)",
+        "onStateSelect(#17429)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "encryptParams",
+      "functions": [
+        "handlePreTrialOrderClick(#16102)",
+        "(#16199)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "checkRecordAudioAuthorizationStatus",
+      "functions": [
+        "?anon_0_(#14465)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "districts_FIR",
+      "functions": [
+        "(#10737)",
+        "(#11460)",
+        "(#11466)",
+        "StateDistCaveatComponent(#17400)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "states_FIR",
+      "functions": [
+        "(#10737)",
+        "(#11460)",
+        "(#11463)",
+        "StateDistCaveatComponent(#17400)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "SEARCH_BY_FIR_NUMBER",
+      "functions": [
+        "(#10734)",
+        "CaseStatusNavigator(#15558)",
+        "CaseStatusScreen(#17627)",
+        "handleGridItemClick(#17633)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "pendingAuthorizationView",
+      "functions": [
+        "(#14421)",
+        "_renderCamera(#14445)",
+        "(#14457)",
+        "render(#14524)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "selected_state_val_FIR",
+      "functions": [
+        "(#11460)",
+        "(#11531)",
+        "SearchByFirNumber(#17346)",
+        "StateDistCaveatComponent(#17400)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "resetdistrictFIR",
+      "functions": [
+        "extraReducers(#11461)",
+        "(#11494)",
+        "(#17356)",
+        "?anon_0_(#17369)",
+        "onStateSelect(#17429)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "isstateloading_FIR",
+      "functions": [
+        "(#11460)",
+        "(#11462)",
+        "(#11463)",
+        "(#11464)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "selected_state_name_FIR",
+      "functions": [
+        "(#11460)",
+        "(#11531)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "encrypt",
+      "functions": [
+        "?anon_0_(#10790)",
+        "(#10957)",
+        "(#10966)",
+        "encrypt(#10967)",
+        "encrypt(#10990)",
+        "encryptParams(#16200)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "encryptBlock",
+      "functions": [
+        "processBlock(#10975)",
+        "generateKeystreamAndEncrypt(#10995)",
+        "processBlock(#11001)",
+        "processBlock(#11007)",
+        "processBlock(#11011)",
+        "processBlock(#11015)",
+        "(#11044)",
+        "(#11051)",
+        "encryptBlock(#11059)",
+        "decryptBlock(#11060)",
+        "(#11082)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "checkVideoAuthorizationStatus",
+      "functions": [
+        "?anon_0_(#14465)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "decrypt",
+      "functions": [
+        "(#10794)",
+        "(#10957)",
+        "(#10966)",
+        "decrypt(#10968)",
+        "decrypt(#10991)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "decryptBlock",
+      "functions": [
+        "processBlock(#10976)",
+        "processBlock(#11016)",
+        "(#11044)",
+        "(#11051)",
+        "encryptBlock(#11059)",
+        "decryptBlock(#11060)",
+        "(#11082)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "Authorization",
+      "functions": [
+        "_default(#9702)",
+        "?anon_0_(#10790)",
+        "?anon_0_(#13472)",
+        "Fetcher(#14253)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "AES_GCM",
+      "functions": [
+        "(#11456)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "AES_GCM_NO_AUTH",
+      "functions": [
+        "(#11456)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "getAuthorizationStatus",
+      "functions": [
+        "(#4896)",
+        "getAuthorizationStatus(#4929)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED",
+      "functions": [
+        "(#469)",
+        "(#1884)",
+        "(#2128)",
+        "(#2427)",
+        "getCurrentReactOwner(#7607)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "fetchFIRNumberState",
+      "functions": [
+        "extraReducers(#11461)",
+        "(#11494)",
+        "handleGridItemClick(#17633)"
+      ]
+    },
+    {
+      "layer": "hbc",
+      "kind": "string",
+      "string": "isAuthorizationChecked",
+      "functions": [
+        "(#14431)",
+        "(#14432)",
+        "_renderCamera(#14445)",
+        "(#14486)",
+        "?anon_0_(#14519)",
+        "?anon_0_(#14523)",
+        "render(#14524)"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": ".  You must have the following declaration within the <application> element:     <meta-data android:name=\"com.google.android.gms.version\" android:value=\"@integer/google_play_services_version\" />",
+      "functions": [
+        "Lcom/google/android/gms/common/GooglePlayServicesIncorrectManifestValueException;-><init>(I)V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "A required meta-data tag in your app's AndroidManifest.xml does not exist.  You must have the following declaration within the <application> element:     <meta-data android:name=\"com.google.android.gms.version\" android:value=\"@integer/google_play_services_version\" />",
+      "functions": [
+        "Lcom/google/android/gms/common/GooglePlayServicesMissingManifestValueException;-><init>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "AES",
+      "functions": [
+        "Landroidx/biometric/g;->a()Landroidx/biometric/BiometricPrompt$c;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "AES/CBC/PKCS7Padding",
+      "functions": [
+        "Landroidx/biometric/g;->a()Landroidx/biometric/BiometricPrompt$c;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "ALTER TABLE apps ADD COLUMN ad_services_version INTEGER;",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzal;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "ANDROID_FIREBASE",
+      "functions": [
+        "LK2/k$b;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "App measurement deactivated via resources. This method is being deprecated. Please refer to https://firebase.google.com/support/guides/disable-analytics",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzft;->zzx()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "Apple iTunes AAC-LC (.M4P) AES Protected Audio",
+      "functions": [
+        "Lh1/c;-><clinit>()V",
+        "Ll1/c;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "Calling updateData inside updateData on the same DataStore instance is not supported\nsince updates made in the parent updateData call will not be visible to the nested\nupdateData call. See https://issuetracker.google.com/issues/241760537 for details.",
+      "functions": [
+        "LG/A;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "Deferring to Google Analytics for Firebase for event data collection. https://firebase.google.com/docs/analytics",
+      "functions": [
+        "Lcom/google/android/gms/internal/measurement/zzds;-><init>(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "FIREBASE_ML_SDK",
+      "functions": [
+        "Lcom/google/android/gms/internal/mlkit_common/zzjr;->get()Ljava/lang/Object;",
+        "Lcom/google/android/gms/internal/mlkit_common/zzjs;->get()Ljava/lang/Object;",
+        "Lcom/google/android/gms/internal/mlkit_vision_barcode/zzlu;->get()Ljava/lang/Object;",
+        "Lcom/google/android/gms/internal/mlkit_vision_barcode/zzlv;->get()Ljava/lang/Object;",
+        "Lcom/google/android/gms/internal/mlkit_vision_common/zzib;->get()Ljava/lang/Object;",
+        "Lcom/google/android/gms/internal/mlkit_vision_common/zzic;->get()Ljava/lang/Object;",
+        "Lcom/google/android/gms/internal/mlkit_vision_face/zzlg;->get()Ljava/lang/Object;",
+        "Lcom/google/android/gms/internal/mlkit_vision_face/zzlh;->get()Ljava/lang/Object;",
+        "Lcom/google/android/gms/internal/mlkit_vision_text/zzlc;->get()Ljava/lang/Object;",
+        "Lcom/google/android/gms/internal/mlkit_vision_text/zzld;->get()Ljava/lang/Object;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "Invalid google_app_id. Firebase Analytics disabled. See https://goo.gl/NAOOOI. provided id",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzny;->zza(Ljava/lang/String;Ljava/lang/String;)Z"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "Missing google_app_id. Firebase Analytics disabled. See https://goo.gl/NAOOOI",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzny;->zza(Ljava/lang/String;Ljava/lang/String;)Z"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "Resettable device id encryption failed",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzkt;->zza(Lcom/google/android/gms/measurement/internal/zzbd;Ljava/lang/String;)[B"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "This is a bug in DataStore. Please file a bug at: https://issuetracker.google.com/issues/new?component=907884&template=1466542",
+      "functions": [
+        "LG/j$g$c$a;->emit(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+        "LG/j$g;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "LG/j;->u(ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "ad_services_version",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzal;-><clinit>()V",
+        "Lcom/google/android/gms/measurement/internal/zzal;->zza(Lcom/google/android/gms/measurement/internal/zzg;ZZ)V",
+        "Lcom/google/android/gms/measurement/internal/zzal;->zze(Ljava/lang/String;)Lcom/google/android/gms/measurement/internal/zzg;",
+        "Lcom/google/android/gms/measurement/internal/zznr;->zza(Lcom/google/android/gms/internal/measurement/zzfu$zzi;)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "adservices_extension_too_old",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zznr;->zza(Lcom/google/android/gms/internal/measurement/zzfu$zzi;)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "app instance id encryption failed",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzkt;->zza(Lcom/google/android/gms/measurement/internal/zzbd;Ljava/lang/String;)[B"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "com.google.android.feature.services_updater",
+      "functions": [
+        "Lcom/google/android/gms/common/util/DeviceProperties;->isLatchsky(Landroid/content/Context;)Z"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_api_unavailable_text",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zad(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_invalid_account_text",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zad(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_invalid_account_title",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zag(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_network_error_text",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zad(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_network_error_title",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zag(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_resolution_required_text",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zae(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_resolution_required_title",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zaf(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_restricted_profile_text",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zad(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_restricted_profile_title",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zag(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_sign_in_failed_text",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zad(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "common_google_play_services_sign_in_failed_title",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zac;->zag(Landroid/content/Context;I)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://%s/%s",
+      "functions": [
+        "Lcom/facebook/react/devsupport/DevServerHelper;->createResourceURL(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://%s/%s.%s?platform=android&dev=%s&lazy=%s&minify=%s&app=%s&modulesOnly=%s&runModule=%s",
+      "functions": [
+        "Lcom/facebook/react/devsupport/DevServerHelper;->createBundleURL(Ljava/lang/String;Lcom/facebook/react/devsupport/DevServerHelper$BundleType;Ljava/lang/String;ZZ)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://%s/inspector/device?name=%s&app=%s&device=%s",
+      "functions": [
+        "Lcom/facebook/react/devsupport/DevServerHelper;->getInspectorDeviceUrl()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://%s/launch-js-devtools",
+      "functions": [
+        "Lcom/facebook/react/devsupport/DevServerHelper;->createLaunchJSDevtoolsCommandUrl()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://%s/open-debugger?device=%s",
+      "functions": [
+        "Lcom/facebook/react/devsupport/DevServerHelper;->openDebugger(Lcom/facebook/react/bridge/ReactContext;Ljava/lang/String;)V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://%s/status",
+      "functions": [
+        "Lcom/facebook/react/devsupport/PackagerStatusCheck;->createPackagerStatusURL(Ljava/lang/String;)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://apache.org/xml/features/disallow-doctype-decl",
+      "functions": [
+        "Lt0/l;->a()Ljavax/xml/parsers/DocumentBuilderFactory;",
+        "Lt0/l;->f(Lt0/a;Lv0/d;)Lorg/w3c/dom/Document;",
+        "Lt0/l;->h(Ljava/lang/String;Lv0/d;)Lorg/w3c/dom/Document;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://apache.org/xml/features/nonvalidating/load-external-dtd",
+      "functions": [
+        "Lt0/l;->a()Ljavax/xml/parsers/DocumentBuilderFactory;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://cipa.jp/exif/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://iptc.org/std/Iptc4xmpExt/2008-02-29/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://javax.xml.XMLConstants/feature/secure-processing",
+      "functions": [
+        "Lt0/l;->a()Ljavax/xml/parsers/DocumentBuilderFactory;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/DICOM/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/StockPhoto/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/TransformXMP/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/album/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/asf/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/bwf/bext/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/camera-raw-settings/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/creatorAtom/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/exif/1.0/",
+      "functions": [
+        "Lt0/o;->j(Lt0/k;)V",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/exif/1.0/aux/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/iX/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/jp2k/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/jpeg/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/pdf/1.3/",
+      "functions": [
+        "Lt0/p;->f()V",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/pdfx/1.3/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/photoshop/1.0/",
+      "functions": [
+        "Lt0/p;->f()V",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/png/1.0/",
+      "functions": [
+        "Lt0/p;->f()V",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/riff/info/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/swf/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/tiff/1.0/",
+      "functions": [
+        "Lt0/p;->f()V",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/",
+      "functions": [
+        "Lt0/p;->f()V",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/\u0000",
+      "functions": [
+        "LQ/a;-><clinit>()V",
+        "Lu1/c;->a(Ljava/lang/Iterable;LT0/c;LH0/f;)V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/bj/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/g/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/g/img/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/mm/",
+      "functions": [
+        "Lt0/o;->l(Lt0/m;)V",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/rights/",
+      "functions": [
+        "Lt0/o;->j(Lt0/k;)V",
+        "Lt0/p;->f()V",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/sType/Dimensions#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/sType/Font#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/sType/Job#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/sType/ManifestItem#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/sType/ResourceEvent#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/sType/ResourceRef#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/sType/Version#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/t/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xap/1.0/t/pg/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xmp/1.0/DynamicMedia/",
+      "functions": [
+        "Lt0/o;->j(Lt0/k;)V",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xmp/1.0/Script/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xmp/Identifier/qual/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xmp/extension/\u0000",
+      "functions": [
+        "Lu1/c;->a(Ljava/lang/Iterable;LT0/c;LH0/f;)V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xmp/note/",
+      "functions": [
+        "Lt0/p;->g()V",
+        "Lu1/c;->h(LT0/c;)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xmp/transient/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.adobe.com/xmp/wav/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://ns.useplus.org/ldf/xmp/1.0/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://purl.org/dc/1.1/",
+      "functions": [
+        "Lt0/f;->a(Lt0/k;Lt0/m;Lorg/w3c/dom/Node;Ljava/lang/String;Z)Lt0/m;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://purl.org/dc/elements/1.1/",
+      "functions": [
+        "Lt0/f;->a(Lt0/k;Lt0/m;Lorg/w3c/dom/Node;Ljava/lang/String;Z)Lt0/m;",
+        "Lt0/o;->e(Ls0/d;Lt0/m;)V",
+        "Lt0/o;->j(Lt0/k;)V",
+        "Lt0/p;->f()V",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://schemas.android.com/apk/res/android",
+      "functions": [
+        "Landroidx/core/content/res/k;->h(Lorg/xmlpull/v1/XmlPullParser;Ljava/lang/String;)Z"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://www.aiim.org/pdfa/ns/extension/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://www.aiim.org/pdfa/ns/field#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://www.aiim.org/pdfa/ns/id/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://www.aiim.org/pdfa/ns/property#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://www.aiim.org/pdfa/ns/schema#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://www.aiim.org/pdfa/ns/type#",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://www.android.com/",
+      "functions": [
+        "Lcom/facebook/soloader/SoLoader;->loadLibraryOnNonAndroid(Ljava/lang/String;)Ljava/lang/Boolean;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://www.npes.org/pdfx/ns/id/",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+      "functions": [
+        "Lt0/f;->d(Lorg/w3c/dom/Node;)I",
+        "Lt0/f;->j(Lt0/k;Lt0/m;Lorg/w3c/dom/Node;Z)V",
+        "Lt0/f;->k(Lt0/k;Lt0/m;Lorg/w3c/dom/Node;Z)V",
+        "Lt0/f;->r(Lt0/k;Lt0/m;Lorg/w3c/dom/Node;Z)V",
+        "Lt0/f;->s(Lt0/k;Lt0/m;Lorg/w3c/dom/Node;Z)V",
+        "Lt0/f;->v(Lt0/k;Lt0/m;Lorg/w3c/dom/Node;Z)V",
+        "Lt0/l;->b(Lorg/w3c/dom/Node;Z[Ljava/lang/Object;)[Ljava/lang/Object;",
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://www.w3.org/XML/1998/namespace",
+      "functions": [
+        "Lt0/p;->g()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://xerces.apache.org/xerces2-j/features.html#disallow-doctype-decl",
+      "functions": [
+        "Lt0/l;->a()Ljavax/xml/parsers/DocumentBuilderFactory;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://xerces.apache.org/xerces2-j/features.html#external-parameter-entities",
+      "functions": [
+        "Lt0/l;->a()Ljavax/xml/parsers/DocumentBuilderFactory;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://xml.org/sax/features/external-general-entities",
+      "functions": [
+        "Lt0/l;->a()Ljavax/xml/parsers/DocumentBuilderFactory;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "http://xml.org/sax/features/external-parameter-entities",
+      "functions": [
+        "Lt0/l;->a()Ljavax/xml/parsers/DocumentBuilderFactory;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://accounts.google.com",
+      "functions": [
+        "Lcom/google/android/gms/auth/api/credentials/IdentityProviders;->getIdentityProviderForAccount(Landroid/accounts/Account;)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://accounts.google.com/o/oauth2/revoke?token=",
+      "functions": [
+        "Lcom/google/android/gms/auth/api/signin/internal/zbb;->run()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://app-measurement.com/a",
+      "functions": [
+        "Lcom/google/android/gms/internal/measurement/zznz;-><clinit>()V",
+        "Lcom/google/android/gms/measurement/internal/zzbf;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://google.com/search?",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzko;->zza(Lcom/google/android/gms/measurement/internal/zzko;ZLandroid/net/Uri;Ljava/lang/String;Ljava/lang/String;)V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://pagead2.googlesyndication.com/pagead/gen_204?id=gmob-apps",
+      "functions": [
+        "Lcom/google/android/gms/ads/identifier/zza;->run()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://pinterest.com/pin/create/button/?url={url}&media=$media&description={message}",
+      "functions": [
+        "Lm0/l;->b()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://play.google.com/store/apps/details?id=com.discord",
+      "functions": [
+        "Lm0/a;->i()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://play.google.com/store/apps/details?id=com.instagram.android",
+      "functions": [
+        "Lm0/h;->i()Ljava/lang/String;",
+        "Lm0/i;->i()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://plus.google.com/",
+      "functions": [
+        "Lcom/google/android/gms/common/internal/zzu;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://plus.google.com/share?url={url}",
+      "functions": [
+        "Lm0/g;->b()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://twitter.com/intent/tweet?text={message}&url={url}",
+      "functions": [
+        "Lm0/s;->b()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://www.facebook.com",
+      "functions": [
+        "Lcom/google/android/gms/auth/api/credentials/IdentityProviders;->getIdentityProviderForAccount(Landroid/accounts/Account;)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://www.facebook.com/sharer/sharer.php?u={url}",
+      "functions": [
+        "Lm0/c;->b()Ljava/lang/String;",
+        "Lm0/d;->b()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://www.google.com",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzny;->zza(Landroid/content/Intent;)Z"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://www.googleadservices.com/pagead/conversion/app/deeplink?id_type=adid&sdk_version=%s&rdid=%s&bundleid=%s&retry=%s",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzny;->zza(JLjava/lang/String;Ljava/lang/String;JLjava/lang/String;)Ljava/net/URL;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://www.googleapis.com/auth/games",
+      "functions": [
+        "Lcom/google/android/gms/auth/api/signin/GoogleSignInOptions;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "https://www.googleapis.com/auth/games_lite",
+      "functions": [
+        "Lcom/google/android/gms/auth/api/signin/GoogleSignInOptions;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "measurement.dma_consent.services_database_update_fix",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zzbf;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "measurement.rb.attribution.client.min_ad_services_version",
+      "functions": [
+        "Lcom/google/android/gms/internal/measurement/zznz;-><clinit>()V",
+        "Lcom/google/android/gms/measurement/internal/zzbf;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "no_access_adservices_attribution_permission",
+      "functions": [
+        "Lcom/google/android/gms/measurement/internal/zznr;->zza(Lcom/google/android/gms/internal/measurement/zzfu$zzi;)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex1",
+      "kind": "string",
+      "string": "type needs to be >= FIRST and <= LAST, type=",
+      "functions": [
+        "Landroidx/core/view/C0$l;->c(I)I"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": " respectively). See https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#mismatch-between-java-code-version-and-c-code-version for more information.",
+      "functions": [
+        "Lcom/swmansion/reanimated/nativeProxy/NativeProxyCommon;->checkCppVersion()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": ". This can happen if you try to overwrite credentials that were previously saved with a different encryption algorithm.",
+      "functions": [
+        "LN3/d;->o(Ljava/lang/String;LM3/c;Ljava/util/concurrent/atomic/AtomicInteger;)Ljava/security/Key;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "AES",
+      "functions": [
+        "LN3/g;->u()Ljava/lang/String;",
+        "LN3/k;->u()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "AES/CBC/PKCS7Padding",
+      "functions": [
+        "LN3/g;->v()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "AES/GCM/NoPadding",
+      "functions": [
+        "LN3/k;->v()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Authorization",
+      "functions": [
+        "Lcom/google/firebase/installations/remote/FirebaseInstallationServiceClient;->deleteFirebaseInstallation(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
+        "Lcom/google/firebase/installations/remote/FirebaseInstallationServiceClient;->generateAuthToken(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/google/firebase/installations/remote/TokenResult;",
+        "Lokhttp3/internal/Util;->isSensitiveHeader(Ljava/lang/String;)Z",
+        "Lokhttp3/internal/authenticator/JavaNetAuthenticator;->authenticate(Lokhttp3/Route;Lokhttp3/Response;)Lokhttp3/Request;",
+        "Lokhttp3/internal/http/RetryAndFollowUpInterceptor;->buildRedirectRequest(Lokhttp3/Response;Ljava/lang/String;)Lokhttp3/Request;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "BREADTH_FIRST",
+      "functions": [
+        "Lkotlin/io/path/PathWalkOption;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "CONFIRM_BUTTON_TAG",
+      "functions": [
+        "Lcom/google/android/material/datepicker/MaterialDatePicker;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Could not decrypt data with alias: ",
+      "functions": [
+        "LN3/g;->b(LP3/c;Ljava/lang/String;[B[BLM3/c;)V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Could not encrypt data for service ",
+      "functions": [
+        "LN3/n;->h(LP3/c;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LM3/c;)V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Could not encrypt data with alias: ",
+      "functions": [
+        "LN3/g;->h(LP3/c;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LM3/c;)V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Decryption failed: Authentication tag verification failed. This usually indicates that the encrypted data was modified, corrupted, or is being decrypted with the wrong key.",
+      "functions": [
+        "LN3/d;->l(Ljava/security/Key;[BLN3/d$b;)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "FNC1_FIRST_POSITION",
+      "functions": [
+        "Lcom/google/zxing/qrcode/decoder/Mode;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "InsetObserverProxy registers on new context while it has not been invalidated on the old one. Please report this as issue at https://github.com/software-mansion/react-native-screens/issues",
+      "functions": [
+        "Lcom/swmansion/rnscreens/InsetsObserverProxy;->registerWithContext(Lcom/facebook/react/bridge/ReactApplicationContext;)V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "KeystoreAESCBC",
+      "functions": [
+        "LN3/g;->c()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "KeystoreAESGCM",
+      "functions": [
+        "LN3/k;->c()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "KeystoreAESGCM_NoAuth",
+      "functions": [
+        "LN3/k;->c()Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Kotlin reflection is not yet supported for synthetic Java properties. Please follow/upvote https://youtrack.jetbrains.com/issue/KT-55980",
+      "functions": [
+        "Lkotlin/jvm/internal/PropertyReference;->getReflected()Lkotlin/reflect/KProperty;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "No decryption results and no error. Something deeply wrong!",
+      "functions": [
+        "Lcom/oblador/keychain/KeychainModule;->decryptToResult(Ljava/lang/String;LN3/b;Lcom/oblador/keychain/b$b;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+        "Lcom/oblador/keychain/KeychainModule;->encryptToResult(Ljava/lang/String;LN3/b;Ljava/lang/String;Ljava/lang/String;LM3/c;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Non-interactive decryption mode.",
+      "functions": [
+        "LP3/i;->b(LP3/a;)V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Please set a valid API key. A Firebase API key is required to communicate with Firebase server APIs: It authenticates your project with Google.Please refer to https://firebase.google.com/support/privacy/init-options.",
+      "functions": [
+        "Lcom/google/firebase/installations/FirebaseInstallations;->preConditionChecks()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Please set your Application ID. A valid Firebase App ID is required to communicate with Firebase server APIs: It identifies your application with Firebase.Please refer to https://firebase.google.com/support/privacy/init-options.",
+      "functions": [
+        "Lcom/google/firebase/installations/FirebaseInstallations;->preConditionChecks()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Please set your Project ID. A valid Firebase Project ID is required to communicate with Firebase server APIs: It identifies your application with Firebase.Please refer to https://firebase.google.com/support/privacy/init-options.",
+      "functions": [
+        "Lcom/google/firebase/installations/FirebaseInstallations;->preConditionChecks()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Proxy-Authorization",
+      "functions": [
+        "Lokhttp3/internal/Util;->isSensitiveHeader(Ljava/lang/String;)Z",
+        "Lokhttp3/internal/authenticator/JavaNetAuthenticator;->authenticate(Lokhttp3/Route;Lokhttp3/Response;)Lokhttp3/Request;",
+        "Lokhttp3/internal/cache/CacheInterceptor$Companion;->isEndToEnd(Ljava/lang/String;)Z"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Screen fragments should never be restored. Follow instructions from https://github.com/software-mansion/react-native-screens/issues/17#issuecomment-424704067 to properly configure your main activity.",
+      "functions": [
+        "Lcom/swmansion/rnscreens/ScreenFragment;-><init>()V",
+        "Lcom/swmansion/rnscreens/ScreenModalFragment;-><init>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "ScreenStack fragments should never be restored. Follow instructions from https://github.com/software-mansion/react-native-screens/issues/17#issuecomment-424704067 to properly configure your main activity.",
+      "functions": [
+        "Lcom/swmansion/rnscreens/ScreenStackFragment;-><init>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_AES_128_CCM_8_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_AES_128_CCM_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_AES_128_GCM_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_AES_256_GCM_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_DSS_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_DSS_WITH_AES_128_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_DSS_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_RSA_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DH_anon_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DH_anon_WITH_AES_128_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DH_anon_WITH_AES_128_GCM_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DH_anon_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DH_anon_WITH_AES_256_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_DH_anon_WITH_AES_256_GCM_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_anon_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_ECDH_anon_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_PSK_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_PSK_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_RSA_WITH_AES_128_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_RSA_WITH_AES_128_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_RSA_WITH_AES_128_GCM_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_RSA_WITH_AES_256_CBC_SHA",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_RSA_WITH_AES_256_CBC_SHA256",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "TLS_RSA_WITH_AES_256_GCM_SHA384",
+      "functions": [
+        "Lokhttp3/CipherSuite;-><clinit>()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "Your application is configured to use RNGestureHandlerEnabledRootView which is no longer supported. You can see how to migrate to <GestureHandlerRootView /> here: https://docs.swmansion.com/react-native-gesture-handler/docs/guides/migrating-off-rnghenabledroot",
+      "functions": [
+        "Lcom/swmansion/gesturehandler/react/RNGestureHandlerEnabledRootView;-><init>(Landroid/content/Context;)V",
+        "Lcom/swmansion/gesturehandler/react/RNGestureHandlerEnabledRootView;-><init>(Landroid/content/Context;Landroid/util/AttributeSet;)V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "[RNScreens] Failed to late-init layout while computing header height. This is most likely a race-condition-bug in react-native-screens, please file an issue at https://github.com/software-mansion/react-native-screens/issues",
+      "functions": [
+        "Lcom/swmansion/rnscreens/utils/ScreenDummyLayoutHelper;->computeDummyLayout(IZ)F"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "[Reanimated] Java side failed to resolve C++ code version. See https://docs.swmansion.com/react-native-reanimated/docs/guides/troubleshooting#java-side-failed-to-resolve-c-code-version for more information.",
+      "functions": [
+        "Lcom/swmansion/reanimated/nativeProxy/NativeProxyCommon;->checkCppVersion()V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "encryptionResult",
+      "functions": [
+        "Lcom/oblador/keychain/a;->d(Ljava/lang/String;LN3/b$c;)V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "firebase_database_url",
+      "functions": [
+        "Lcom/google/firebase/FirebaseOptions;->fromResource(Landroid/content/Context;)Lcom/google/firebase/FirebaseOptions;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "http://",
+      "functions": [
+        "Lcom/google/zxing/client/result/URIParsedResult;->massageURI(Ljava/lang/String;)Ljava/lang/String;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "http://schemas.android.com/apk/res-auto",
+      "functions": [
+        "Lcom/google/android/material/chip/a;->A1(Landroid/util/AttributeSet;II)V",
+        "Lcom/google/android/material/search/SearchBar;->N(Landroid/util/AttributeSet;)V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "http://schemas.android.com/apk/res/android",
+      "functions": [
+        "Lcom/google/android/material/chip/Chip;->D(Landroid/util/AttributeSet;)V"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "https://",
+      "functions": [
+        "Lokhttp3/Cache$Entry;->isHttps()Z"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "string",
+      "string": "https://%s/%s/%s",
+      "functions": [
+        "Lcom/google/firebase/installations/remote/FirebaseInstallationServiceClient;->getFullyQualifiedRequestUri(Ljava/lang/String;)Ljava/net/URL;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "method",
+      "string": "Lcom/oblador/keychain/KeychainModule;->access$decryptCredentials(Lcom/oblador/keychain/KeychainModule;Ljava/lang/String;LN3/b;Lcom/oblador/keychain/b$b;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+      "functions": [
+        "Lcom/oblador/keychain/KeychainModule$b;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "Lcom/oblador/keychain/KeychainModule$c;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "method",
+      "string": "Lcom/oblador/keychain/KeychainModule;->access$encryptToResult(Lcom/oblador/keychain/KeychainModule;Ljava/lang/String;LN3/b;Ljava/lang/String;Ljava/lang/String;LM3/c;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+      "functions": [
+        "Lcom/oblador/keychain/KeychainModule$e;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "method",
+      "string": "Lcom/oblador/keychain/KeychainModule;->decryptCredentials(Ljava/lang/String;LN3/b;Lcom/oblador/keychain/b$b;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+      "functions": [
+        "Lcom/oblador/keychain/KeychainModule;->access$decryptCredentials(Lcom/oblador/keychain/KeychainModule;Ljava/lang/String;LN3/b;Lcom/oblador/keychain/b$b;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "method",
+      "string": "Lcom/oblador/keychain/KeychainModule;->decryptToResult(Ljava/lang/String;LN3/b;Lcom/oblador/keychain/b$b;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+      "functions": [
+        "Lcom/oblador/keychain/KeychainModule;->access$decryptToResult(Lcom/oblador/keychain/KeychainModule;Ljava/lang/String;LN3/b;Lcom/oblador/keychain/b$b;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+        "Lcom/oblador/keychain/KeychainModule;->decryptCredentials(Ljava/lang/String;LN3/b;Lcom/oblador/keychain/b$b;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "method",
+      "string": "Lcom/oblador/keychain/KeychainModule;->encryptToResult(Ljava/lang/String;LN3/b;Ljava/lang/String;Ljava/lang/String;LM3/c;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+      "functions": [
+        "Lcom/oblador/keychain/KeychainModule;->access$encryptToResult(Lcom/oblador/keychain/KeychainModule;Ljava/lang/String;LN3/b;Ljava/lang/String;Ljava/lang/String;LM3/c;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+        "Lcom/oblador/keychain/KeychainModule;->migrateCipherStorage(Ljava/lang/String;LN3/b;LN3/b;LN3/b$b;Landroidx/biometric/BiometricPrompt$d;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "layer": "dex2",
+      "kind": "method",
+      "string": "Lokhttp3/internal/http2/Hpack;->getNAME_TO_FIRST_INDEX()Ljava/util/Map;",
+      "functions": [
+        "Lokhttp3/internal/http2/Hpack$Writer;->writeHeaders(Ljava/util/List;)V"
+      ]
+    }
+  ],
+  "_meta": {
+    "count": 385,
+    "truncated": false,
+    "hint": "pair with --search for a targeted query; --limit caps the output",
+    "related": [
+      "strings",
+      "frida",
+      "decompile"
+    ],
+    "tool_version": "2.0.0"
+  }
+}

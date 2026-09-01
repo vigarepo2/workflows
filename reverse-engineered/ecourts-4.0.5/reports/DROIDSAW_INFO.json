@@ -1,0 +1,39 @@
+{
+  "info": {
+    "path": "app.apk",
+    "package": "in.gov.ecourts.eCourtsServices",
+    "version_name": "4.0.5",
+    "layers": {
+      "has_manifest": true,
+      "hbc_present": true,
+      "hbc_parse_error": null,
+      "dex_count": 2,
+      "native_lib_abis": [
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86",
+        "x86_64"
+      ],
+      "hbc_version": 96,
+      "hbc_function_count": 24310,
+      "hbc_string_count": 38427,
+      "dex_versions": [
+        "039",
+        "039"
+      ]
+    },
+    "loaded_splits": []
+  },
+  "_meta": {
+    "count": 1,
+    "truncated": false,
+    "hint": "use `droidsaw manifest` for permissions/components, `droidsaw apk-info` for a full one-shot report",
+    "related": [
+      "manifest",
+      "signing",
+      "apk-info",
+      "audit"
+    ],
+    "tool_version": "2.0.0"
+  }
+}
